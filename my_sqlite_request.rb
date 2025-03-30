@@ -551,7 +551,16 @@ class MySqliteRequest
     end
 #   8
 # Update Implement a method to update which will receive a table name (filename). It will continue to build the request. An update request might be associated with a where request.
-# def update(table_name)
+def update(table_name)
+    table = @tables[table_name]
+    return unless table # Return early if table DNE
+
+    table.each do |row|
+        if @conditions.nil? || @conditions.all? { |col, val| row[col] == val }
+            @updates.each { |col, val| row[col] = val if row.key?(col) }
+        end
+    end
+end
 
 #   9
 # Set Implement a method to update which will receive data (a hash of data on format (key => value)). It will perform the update of attributes on all matching row. An update request might be associated with a where request.
