@@ -552,23 +552,31 @@ class MySqliteRequest
 #   8
 # Update Implement a method to update which will receive a table name (filename). It will continue to build the request. An update request might be associated with a where request.
 def update(table_name)
-    table = @tables[table_name]
-    return unless table # Return early if table DNE
+    add_my_sqlite_request("UPDATE #{table_name}")
+    # table = @tables[table_name]
+    # return unless table # Return early if table DNE
 
-    table.each do |row|
-        if @conditions.nil? || @conditions.all? { |col, val| row[col] == val }
-            @updates.each { |col, val| row[col] = val if row.key?(col) }
-        end
+    # table.each do |row|
+    #     if @conditions.nil? || @conditions.all? { |col, val| row[col] == val }
+    #         @updates.each { |col, val| row[col] = val if row.key?(col) }
+    #     end
     end
 end
 
 #   9
 # Set Implement a method to update which will receive data (a hash of data on format (key => value)). It will perform the update of attributes on all matching row. An update request might be associated with a where request.
-# def set(data)
+def set(data)
+    if check_sqlite_statement("VALUE") == 4
+        return add_my_sqlite_request("VALUE")
+    end
+end
 
 #   10
 # Delete Implement a delete method. It set the request to delete on all matching row. It will continue to build the request. An delete request might be associated with a where request.
-# def delete
+def delete
+    add_my_sqlite_request("DELETE")
+    self # Return self for chaining
+end
 
 #   11
 # Run Implement a run method and it will execute the request.
