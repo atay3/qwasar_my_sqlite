@@ -45,6 +45,7 @@ class MySqliteRequest
         @request_errors.nil?
     end
 
+    #   gets the current request(s) for my_sqlite
     def get_my_sqlite_request
         @my_sqlite_request
     end
@@ -58,6 +59,7 @@ class MySqliteRequest
         @my_sqlite_request.append(statement)
     end
 
+    #   checks for duplicate statements in the request
     def check_duplicate_statements(statement, request_query)
         #   check if prior requests
         if get_my_sqlite_request.length > 0
@@ -86,8 +88,8 @@ class MySqliteRequest
         return false
     end
 
+    #   check if the same statement was already requested
     def check_sqlite_statement(statement)
-        #   check if same statement already requested
         case statement
         when "SELECT", "UPDATE", "INSERT", "DELETE"
             return -2 if check_duplicate_statements(statement, ["SELECT", "UPDATE", "INSERT", "DELETE"])
@@ -129,6 +131,7 @@ class MySqliteRequest
         CSV.read(file_name, converters: :all)[0]
     end
 =end
+    #   gets the headers for the specified table
     def get_table_headers(table_data)
         return table_data[0]
     end
@@ -142,10 +145,14 @@ class MySqliteRequest
         @from_table_two[0]
     end
 =end
+    #   reads the specified CSV file and applies all available converters to the data
+    #   i.e. automatically convert values to their appropriate Ruby data types 
+    #   (e.g., numbers, dates, booleans) instead of treating everything as strings.
     def read_csv_file(file_name)
         return CSV.read(file_name, converters: :all)
     end
     
+    #   adds an custom error message for error(s) when making a request method
     def add_error(error_msg)
         @request_errors.append(error_msg)
     end
@@ -155,6 +162,7 @@ class MySqliteRequest
 # (technically a table_name is also a filename (.csv))
 # It will be prototyped:
 
+    #   checks if filename is valid
     def check_filename(file_name)
     # def match_filename(table_name)
         # if test_file != 'nba_play_data.csv' do
@@ -174,6 +182,7 @@ class MySqliteRequest
     #   TODO check for specific .csv files?
     #       nba_players.csv nba_player_data.csv
 
+    #   gets the table data - name, data, headers from the csv file
     def get_table_data(table_name)
         table_hash = {
             name: table_name,
