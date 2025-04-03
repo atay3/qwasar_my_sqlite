@@ -111,7 +111,13 @@ class MySqliteRequest
         when "INSERT", "VALUE"
             return -6 if check_duplicate_statements(statement, ["INSERT", "VALUE"])
             return 4
-        end
+        # end
+        when "SET"
+            return -7 if check_duplicate_statements(statement, ["SET"])
+            return 5
+        when "DELETE"
+            return -8 if check_duplicate_statements(statement, ["DELETE"])
+            return 6
         #   invalid sqlite statement
         add_error("invalid sqlite statement")
         return -1
@@ -552,28 +558,31 @@ class MySqliteRequest
 #   8
 # Update Implement a method to update which will receive a table name (filename). It will continue to build the request. An update request might be associated with a where request.
 def update(table_name)
+    if check_sqlite_statement("UPDATE") == -2
+        return -2
+    end
     add_my_sqlite_request("UPDATE #{table_name}")
-    # table = @tables[table_name]
-    # return unless table # Return early if table DNE
-
-    # table.each do |row|
-    #     if @conditions.nil? || @conditions.all? { |col, val| row[col] == val }
-    #         @updates.each { |col, val| row[col] = val if row.key?(col) }
-    #     end
+    self
     end
 end
 
 #   9
 # Set Implement a method to update which will receive data (a hash of data on format (key => value)). It will perform the update of attributes on all matching row. An update request might be associated with a where request.
 def set(data)
-    if check_sqlite_statement("VALUE") == 4
-        return add_my_sqlite_request("VALUE")
+    if check_sqlite_statement("SET") == -7
+        return -7
     end
+    set_statement = data.map { |col, val| "#{col} = '#{val}'" }.join(", ")
+    add_my_sqlite_request("SET #{set_statement}")
+    self
 end
 
 #   10
 # Delete Implement a delete method. It set the request to delete on all matching row. It will continue to build the request. An delete request might be associated with a where request.
 def delete
+    if check_sqlite_statement("DELETE") == -8
+        return -8
+    end
     add_my_sqlite_request("DELETE")
     self # Return self for chaining
 end
