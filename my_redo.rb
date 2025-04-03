@@ -15,6 +15,7 @@ class MySqliteRequest
     #   We will do only 1 join and can do one or multiple where(s) per request.
     # @my_sqlite_request = []
     
+    #   final data for run()?
     @table_data = nil
     @selected_columns = nil
     @where_result = nil
@@ -30,14 +31,17 @@ class MySqliteRequest
     attr_reader :request_errors
 #     Constructor It will be prototyped:
     def initialize()
+        #   the current request methods for my_sqlite
         @my_sqlite_request = []
+        #   errors from calling request method(s)
         @request_errors = []
+        #   information of table from the "FROM" request method
+        #   see get_table_data for implementation
         @from_table = {}
     end
 
     #   checks for errors in the request
     def check_for_error
-        #   any error(s) found
         @request_errors.nil?
     end
 
@@ -180,13 +184,14 @@ class MySqliteRequest
     end
     #   for checking csv
     def from(table_name)
+        #   check for error(s)
         return false if check_for_error
         #   check if file is valid
         return -1 if !check_filename(table_name)
         #   check if FROM already requested
         statement_result = check_sqlite_statement("FROM")
         if statement_result >= 0
-            #   update ongoing request
+            #   update ongoing sqlite request
             add_my_sqlite_request("FROM")
             #   read and save csv contents
 =begin  old implementation - separated into modular function
@@ -333,7 +338,7 @@ class MySqliteRequest
                     add_error("Error: no such column #{column_on_db_b}")
                     return -3
                 end
-=begin      #   separated into a helper function
+=begin      #   separated into a helper function >> see join_combine_tables
                 table_b_data = read_csv_file(filename_db_b)
                 #   create combined data
                 table_combined = []
@@ -538,4 +543,8 @@ end
 
 #   11
 # Run Implement a run method and it will execute the request.
+def run()
+    @table_data
+end
+
 end
