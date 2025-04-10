@@ -1,6 +1,6 @@
 require 'csv'
 
-class chain_method
+class ChainMethod
     def initialize
         @temp = []
         @file_data = {}
