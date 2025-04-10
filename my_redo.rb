@@ -145,14 +145,10 @@ class MySqliteRequest
         @from_table_two[0]
     end
 =end
-    #   reads the specified CSV file and applies all available converters to the data
-    #   i.e. automatically convert values to their appropriate Ruby data types 
-    #   (e.g., numbers, dates, booleans) instead of treating everything as strings.
     def read_csv_file(file_name)
         return CSV.read(file_name, converters: :all)
     end
     
-    #   adds an custom error message for error(s) when making a request method
     def add_error(error_msg)
         @request_errors.append(error_msg)
     end
@@ -162,7 +158,6 @@ class MySqliteRequest
 # (technically a table_name is also a filename (.csv))
 # It will be prototyped:
 
-    #   checks if filename is valid
     def check_filename(file_name)
     # def match_filename(table_name)
         # if test_file != 'nba_play_data.csv' do
@@ -182,7 +177,6 @@ class MySqliteRequest
     #   TODO check for specific .csv files?
     #       nba_players.csv nba_player_data.csv
 
-    #   gets the table data - name, data, headers from the csv file
     def get_table_data(table_name)
         table_hash = {
             name: table_name,
