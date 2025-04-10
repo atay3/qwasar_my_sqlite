@@ -118,6 +118,7 @@ class MySqliteRequest
             return -8 if check_duplicate_statements(statement, ["DELETE"])
             return 6
         #   invalid sqlite statement
+        end
         add_error("invalid sqlite statement")
         return -1
     end
@@ -410,8 +411,9 @@ class MySqliteRequest
             return -2
         end
         add_my_sqlite_request("UPDATE #{table_name}")
-        @table_name = table_name
-        @updated_table = {}
+        # @table_name = table_name
+        @update_table = get_table_data(table_name)
+        puts "Updating table..."
         self
     end
 
@@ -421,9 +423,9 @@ class MySqliteRequest
         if check_sqlite_statement("SET") == -7
             return -7
         end
-        add_my_sqlite_request("SET #{set_statement}")
-        set_statement = data.map { |col, val| "#{col} = '#{val}'" }.join(", ")
-        # @update_data = data
+        add_my_sqlite_request("SET #{data}")
+        @update_data = data
+        puts "setting data..."
         self
     end
 
@@ -439,9 +441,29 @@ class MySqliteRequest
 
 #   11
 # Run Implement a run method and it will execute the request.
-    def run
-        table = @tables[table_name]
-        return unless table # Exit if table does not exist
-    end
-end
+    # def run
+    #     return false if @update_data.nil? || @table_data.nil?
+
+    #     headers = get_table_headers
+    #     update_indexes = @update_data.map { |col, _| headers.find_index(col) }
+
+    #     if update_indexes.any?(&:nil?)
+    #         puts "Update failed - one or more columns not found"
+    #         return -3
+    #     end
+
+    #     # Get matching rows (from where, or all if no where)
+    #     target_rows = @where_result || @table_data[1..-1]
+
+    #     target_rows.each do |row|
+    #         @update_data.each do |col, new_val|
+    #             col_index = headers.find_index(col)
+    #             row[col_index] = new_val
+    #         end
+    #     end
+
+    #     puts "Update successful"
+    #     return 1
+    # end
+
 end
