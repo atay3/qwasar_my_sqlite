@@ -126,6 +126,9 @@ class MySqliteRequest
     def get_table_headers(table_data)
         return table_data[0]
     end
+    # def get_table_headers()
+    #     return @table_data[0]
+    # end
     #   old idea for headers - changed to get current table headers
 
     def read_csv_file(file_name)
@@ -160,6 +163,7 @@ class MySqliteRequest
         table_hash[:headers] = get_table_headers(table_hash[:data])
         return table_hash
     end
+
     #   for checking csv
     def from(table_name)
         return false if check_for_error
@@ -173,9 +177,11 @@ class MySqliteRequest
             #   read and save csv contents
             @from_table = get_table_data(table_name)
             # p @from_table
-            return 0
+            # return 0
+            return self
         end
         return -2
+        # self
     end
 #   2
 #   Select Implement a where method which will take one argument 
@@ -214,16 +220,28 @@ class MySqliteRequest
 
     def where(column_name, criteria)
         return false if check_for_error
-        if check_columns(column_name)
+
+        # header = @from_table[:headers]
+        # where_column = header.find_index(column_name)
+        where_column = get_table_headers(column_name)
+
+        # if check_columns(column_name, header)
+        if check_columns(column_name, where_column)
             result = []
-            where_column = get_table_headers.find_index(column_name)
+            # where_column = get_table_headers.find_index(column_name)
             #   add each row of table data
+
             @table_data[1..-1].each do |data|
                 tmp = []
                 if data[where_column] == criteria
                     #   add each column from select query
                     @selected_columns.each do |index|
                         tmp.append(data[index])
+                    end
+                end
+                if row[where_column] == criteria
+                    @selected_columns.each do |index|
+                      tmp << row[index]
                     end
                 end
                 result.append(tmp) if !tmp.empty?
@@ -411,8 +429,8 @@ class MySqliteRequest
             return -2
         end
         add_my_sqlite_request("UPDATE #{table_name}")
-        # @table_name = table_name
-        @update_table = get_table_data(table_name)
+        @table_name = table_name
+        # @update_table = get_table_data(table_name)
         puts "Updating table..."
         self
     end

@@ -9,9 +9,11 @@ end
 
 # Initialize and build the update request
 request = MySqliteRequest.new
-request.update("student")
+request.from("student.csv")
+       .update("student")
        .set({ "ID" => "7", "AGE" => "11" })
        .where("NAME", "a")
+
 
 # ---- BEGIN mock .run implementation for testing ----
 # simulate the update logic since `.run` is not implemented
