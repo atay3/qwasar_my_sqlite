@@ -13,18 +13,16 @@ class MySqliteRequest
     #   You will build the request by progressive call and execute the request by calling run
     #   Each row must have an ID.
     #   We will do only 1 join and can do one or multiple where(s) per request.
+
     # @my_sqlite_request = []
-=begin  old implementation, using only 1 table now, current_table
-    # @from_table_one = nil
-    # @from_table_two = nil
-    
-=end
+
     # @current_table = nil
-    @table_data = nil
-    @selected_columns = nil
-    @where_result = nil
-    @insert_values_data = nil
-    @query_result = []
+
+    # @table_data = nil
+    # @selected_columns = nil
+    # @where_result = nil
+    # @insert_values_data = nil
+    # @query_result = []
 
     # @my_sqlite_request = []
     # @request_errors = []
@@ -38,17 +36,21 @@ class MySqliteRequest
         @my_sqlite_request = []
         @request_errors = []
         @from_table = {}
-    end
-  
-=begin  old implementation, using get_current_table instead
-    def get_table_one
-        @from_table_one
+        @table_data = nil
+        @selected_columns = nil
+        @where_result = nil
+        @insert_values_data = nil
+        @query_result = []
+
+        #   warren test - temp_table
+        @temp_table
     end
 
-    def get_table_two
-        @from_table_two
-    end
-=end
+    # def initialize()
+    #     @my_sqlite_request = []
+    #     @request_errors = []
+    #     @from_table = {}
+    # end
 
     def check_for_error
         @request_errors.length > 0 || false
@@ -111,42 +113,27 @@ class MySqliteRequest
         when "INSERT", "VALUE"
             return -6 if check_duplicate_statements(statement, ["INSERT", "VALUE"])
             return 4
-        end
+        # end
+        when "SET"
+            return -7 if check_duplicate_statements(statement, ["SET"])
+            return 5
+        when "DELETE"
+            return -8 if check_duplicate_statements(statement, ["DELETE"])
+            return 6
         #   invalid sqlite statement
+        end
         add_error("invalid sqlite statement")
         return -1
     end
-    
-=begin  old implementation, no longer used
-    def get_current_table
-        # return -1 if @current_table.nil?
-        @current_table
-    end
 
-    def get_all_table_data
-        @table_data
-    end
-=end
-
-=begin  old implementation, not that modular
-    def get_table_headers(file_name)
-        # @table_data[0]
-        CSV.read(file_name, converters: :all)[0]
-    end
-=end
     def get_table_headers(table_data)
         return table_data[0]
     end
+    # def get_table_headers()
+    #     return @table_data[0]
+    # end
     #   old idea for headers - changed to get current table headers
-=begin
-    def get_table_one_headers
-        @from_table_one[0]
-    end
 
-    def get_table_two_headers
-        @from_table_two[0]
-    end
-=end
     def read_csv_file(file_name)
         return CSV.read(file_name, converters: :all)
     end
@@ -161,26 +148,6 @@ class MySqliteRequest
 # It will be prototyped:
 
     def check_filename(file_name)
-    # def match_filename(table_name)
-        # if test_file != 'nba_play_data.csv' do
-        #     return 1
-        # elsif test_file != 'nba_players.csv' do
-        #     return 2
-        # else
-        #     return 0
-
-        #   previous hardcoded implmentation
-=begin        case table_name
-        when "nba_player_data.csv"
-            @current_table = table_name
-            return 1
-        when "nba_players.csv"
-            @current_table = table_name
-            return 2
-        else
-            return 0
-        end
-=end    
         #   more modular implementation with file exists check
         ##  TODO check if file is actually a csv file
         return 0 if File.exist?(file_name)
@@ -199,6 +166,7 @@ class MySqliteRequest
         table_hash[:headers] = get_table_headers(table_hash[:data])
         return table_hash
     end
+
     #   for checking csv
     def from(table_name)
         return false if check_for_error
@@ -210,44 +178,20 @@ class MySqliteRequest
             #   update ongoing request
             add_my_sqlite_request("FROM")
             #   read and save csv contents
-=begin  old implementation - separated into modular function
-            @from_table = {
-                name: table_name,
-                data: read_csv_file(table_name),
-                # headers: get_table_headers(table_name)
-            }
-            @from_table[:headers] = get_table_headers(@from_table[:data])
-=end
-            @from_table = get_table_data(table_name)
+            # @from_table = get_table_data(table_name)
+            @temp_table = get_table_data(table_name)
             # p @from_table
-            return 0
+            # return 0
+            return self
         end
-=begin  old code for multiple from tables, doesnt seem necessary
-        # if @from_table_one.nil? then
-        #     @from_table_one = CSV.read(table_name)
-        #     puts "set1"
-        #     # puts @from_table_one
-        # elsif @from_table_two.nil? then
-        #     @from_table_two = CSV.read(table_name)
-        #     puts "set2"
-        # else
-        #     return -1
-        # end
-        # return 1
-=end
         return -2
+        # self
     end
 #   2
 #   Select Implement a where method which will take one argument 
 #   a string OR an array of string. It will continue to build the request. 
 #   During the run() you will collect on the result only the columns sent as parameters to select :-).
 # It will be prototyped:
-
-=begin  old implementation - not modular
-    def check_columns(column_name, file_name)
-        get_table_headers(file_name).include?(column_name)
-    end
-=end
 
     def check_columns(column_name, table_headers)
         table_headers.include?(column_name)
@@ -280,16 +224,28 @@ class MySqliteRequest
 
     def where(column_name, criteria)
         return false if check_for_error
-        if check_columns(column_name)
+
+        # header = @from_table[:headers]
+        # where_column = header.find_index(column_name)
+        where_column = get_table_headers(column_name)
+
+        # if check_columns(column_name, header)
+        if check_columns(column_name, where_column)
             result = []
-            where_column = get_table_headers.find_index(column_name)
+            # where_column = get_table_headers.find_index(column_name)
             #   add each row of table data
+
             @table_data[1..-1].each do |data|
                 tmp = []
                 if data[where_column] == criteria
                     #   add each column from select query
                     @selected_columns.each do |index|
                         tmp.append(data[index])
+                    end
+                end
+                if row[where_column] == criteria
+                    @selected_columns.each do |index|
+                      tmp << row[index]
                     end
                 end
                 result.append(tmp) if !tmp.empty?
@@ -310,17 +266,6 @@ class MySqliteRequest
 # Join Implement a join method which will load another filename_db and will join both database on a on column.
 # It will be prototyped:
 
-=begin      old implementation - no longer used
-    def join_table_data(tmp_data)
-        updated_table = [get_table_headers()]
-        tmp_data.each do |key,val|
-            tmp = [key, val]
-            # tmp.flatten
-            updated_table.append(tmp.flatten)
-        end
-        p updated_table
-    end
-=end
     def join_combine_tables(column_on_db_a, table_b_hash, column_on_db_b)
         #   create combined data
         table_combined = []
@@ -350,14 +295,6 @@ class MySqliteRequest
                 add_error("Error: no such column #{column_on_db_a}")
                 return -2
             end
-=begin      from_table already stores this
-            table_a_data = {
-                name: @from_table[:name],
-                data: @from_table[:data],
-                headers: get_table_headers(@from_table[:name]),
-            }
-            puts "table a data #{table_a_data}"
-=end
             # p from_table
             #   check filename database b if exists
             if check_filename(filename_db_b) == 0
@@ -367,24 +304,6 @@ class MySqliteRequest
                     add_error("Error: no such column #{column_on_db_b}")
                     return -3
                 end
-=begin      #   separated into a helper function
-                table_b_data = read_csv_file(filename_db_b)
-                #   create combined data
-                table_combined = []
-                #   add headers of both
-                a_index = @from_table[:headers].find_index(column_on_db_a)
-                b_headers = get_table_headers(filename_db_b)
-                b_index = b_headers.find_index(column_on_db_b)
-                table_combined.append(@from_table[:headers] + b_headers)
-                #   add rows from both if column values are equal
-                @from_table[:data][1..-1].each do |a_row|
-                    table_b_data[1..-1].each do |b_row|
-                        if a_row[a_index] == b_row[b_index]
-                            table_combined.append(a_row + b_row)
-                        end
-                    end
-                end
-=end
                 # @table_data = table_combined
                 @table_data = join_combine_tables(column_on_db_a, table_b_hash, column_on_db_b)
                 # p @table_data
@@ -393,48 +312,6 @@ class MySqliteRequest
             end
         end
         return -1
-=begin old implementation
-        if from(filename_db_b) > 0
-            #   check if column b exists in filename b
-            puts "here"
-            return -2 if check_columns(column_on_db_b, filename_db_b) == false
-            #   if col_a data matches col_b data
-            puts "there"
-            tmp = {}
-            column_a_index = table_a_headers.find_index(column_on_db_a)
-            column_b_index = get_table_headers.find_index(column_on_db_b)
-            #   table a stuff
-            # p "col a indx #{column_a_index} b #{column_b_index}"
-            # p table_a_data
-            table_a_data[1..5].each do |a_data|
-                # p "a_data #{a_data}"
-                # p "-------------1"
-                a_hash_key = a_data[column_a_index]
-                # p "a hash key #{a_hash_key}"
-                # p "-------------2"
-                tmp[a_hash_key] = a_data.reject {|x| x == a_data[column_a_index]}
-                # p "tmp[a_hash_key] #{tmp[a_hash_key]}"
-                # p "-------------3"
-            end
-            # puts "nono\n#{tmp}"
-            #   table b stuff
-            @table_data[1..5].each do |b_data|
-                # p b_data
-                b_hash_key = b_data[column_b_index]
-                # p b_hash_key
-                if tmp.has_key?(b_hash_key)
-                # b_hash_value_list = tmp[b_hash_key]
-                    tmp[b_hash_key].append(b_data.reject {|y| y == b_data[column_b_index]})
-                end
-            end
-            puts "join\n"
-            puts tmp
-            #   combine data in tmp to table data format
-            join_table_data(tmp)
-        end
-        add_error("Error: no such column #{column_on_db_b}")
-        return -3
-=end
     end
 #   5
 # Order Implement an order method which will received two parameters, order (:asc or :desc) and column_name. It will sort depending on the order base on the column_name.
@@ -551,25 +428,64 @@ class MySqliteRequest
     end
 #   8
 # Update Implement a method to update which will receive a table name (filename). It will continue to build the request. An update request might be associated with a where request.
-def update(table_name)
-    table = @tables[table_name]
-    return unless table # Return early if table DNE
-
-    table.each do |row|
-        if @conditions.nil? || @conditions.all? { |col, val| row[col] == val }
-            @updates.each { |col, val| row[col] = val if row.key?(col) }
+    def update(table_name)
+        if check_sqlite_statement("UPDATE") == -2
+            return -2
         end
+        add_my_sqlite_request("UPDATE #{table_name}")
+        @table_name = table_name
+        # @update_table = get_table_data(table_name)
+        puts "Updating table..."
+        self
     end
-end
 
 #   9
 # Set Implement a method to update which will receive data (a hash of data on format (key => value)). It will perform the update of attributes on all matching row. An update request might be associated with a where request.
-# def set(data)
+    def set(data)
+        if check_sqlite_statement("SET") == -7
+            return -7
+        end
+        add_my_sqlite_request("SET #{data}")
+        @update_data = data
+        puts "setting data..."
+        self
+    end
 
 #   10
 # Delete Implement a delete method. It set the request to delete on all matching row. It will continue to build the request. An delete request might be associated with a where request.
-# def delete
+    def delete
+        if check_sqlite_statement("DELETE") == -8
+            return -8
+        end
+        add_my_sqlite_request("DELETE")
+        self # Return self for chaining
+    end
 
 #   11
 # Run Implement a run method and it will execute the request.
+    # def run
+    #     return false if @update_data.nil? || @table_data.nil?
+
+    #     headers = get_table_headers
+    #     update_indexes = @update_data.map { |col, _| headers.find_index(col) }
+
+    #     if update_indexes.any?(&:nil?)
+    #         puts "Update failed - one or more columns not found"
+    #         return -3
+    #     end
+
+    #     # Get matching rows (from where, or all if no where)
+    #     target_rows = @where_result || @table_data[1..-1]
+
+    #     target_rows.each do |row|
+    #         @update_data.each do |col, new_val|
+    #             col_index = headers.find_index(col)
+    #             row[col_index] = new_val
+    #         end
+    #     end
+
+    #     puts "Update successful"
+    #     return 1
+    # end
+
 end
