@@ -425,12 +425,17 @@ class MySqliteRequest
 #   8
 # Update Implement a method to update which will receive a table name (filename). It will continue to build the request. An update request might be associated with a where request.
     def update(table_name)
+        if !check_filename(table_name)
+            return -1
+        end
+
         if check_sqlite_statement("UPDATE") == -2
             return -2
         end
+
         add_my_sqlite_request("UPDATE #{table_name}")
-        @table_name = table_name
-        # @update_table = get_table_data(table_name)
+        # @table_name = table_name
+        @update_table = get_table_data(table_name)
         puts "Updating table..."
         self
     end
@@ -459,29 +464,37 @@ class MySqliteRequest
 
 #   11
 # Run Implement a run method and it will execute the request.
-    # def run
-    #     return false if @update_data.nil? || @table_data.nil?
+    def run
+        return if @my_sqlite_request.empty?
 
-    #     headers = get_table_headers
-    #     update_indexes = @update_data.map { |col, _| headers.find_index(col) }
+        my_sqlite_request.each do |request|
+            if request.start_with?("UPDATE")
+                run_update();
+            end
+        end
 
-    #     if update_indexes.any?(&:nil?)
-    #         puts "Update failed - one or more columns not found"
-    #         return -3
-    #     end
+    end
 
-    #     # Get matching rows (from where, or all if no where)
-    #     target_rows = @where_result || @table_data[1..-1]
+    def run_update()
+        table_name = @from_table[:name]
+        headers = @table_data.first.headers
 
-    #     target_rows.each do |row|
-    #         @update_data.each do |col, new_val|
-    #             col_index = headers.find_index(col)
-    #             row[col_index] = new_val
-    #         end
-    #     end
+        updated_rows = []
 
-    #     puts "Update successful"
-    #     return 1
-    # end
+        @table_data.each do |row|
+            if @where_result.nil? || row[@where_result[:column]] == @where_result[:value]
+              @update_data.each do |col, val|
+                row[col] = val
+              end
+            end
+            updated_rows << row
+          end
+
+          CSV.open(table_name, "w", write_headers: true, headers: headers) do |csv|
+            updated_rows.each do |row|
+              csv << row
+            end
+        end
+    end
 
 end
