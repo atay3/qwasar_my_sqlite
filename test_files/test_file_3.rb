@@ -1,18 +1,25 @@
-require './my_sqlite_request'
-require './my_sqlite_cli'
+require_relative '../my_sqlite_request'
+require_relative '../my_sqlite_cli'
+
 
 # Print the CSV before update
-puts "BEFORE UPDATE:"
-CSV.foreach("test_data/student.csv", headers: true) do |row|
-  puts row.to_h
-end
+# puts "BEFORE UPDATE:"
+# CSV.foreach("test_data/student.csv", headers: true) do |row|
+#   puts row.to_h
+# end
+
+#debug start - update warren
+# request = MySqliteRequest.new
+# puts "start\n"
+# request.update("../test_data/student.csv")
+#debug end warren
 
 # Initialize and build the update request
 request = MySqliteRequest.new
-request.update("student")
+request.update("../test_data/student.csv")
        .set({ "ID" => "7", "AGE" => "11" })
        .where("NAME", "a")
-       .run
+       .run()
 
 # ---- BEGIN mock .run implementation for testing ----
 # simulate the update logic since `.run` is not implemented

@@ -50,7 +50,7 @@ class MySqliteRequest
     # end
 
     def check_for_error
-        @request_errors.length > 0 || false
+        @request_errors.empty?
     end
 
     def get_my_sqlite_request
@@ -147,7 +147,9 @@ class MySqliteRequest
     def check_filename(file_name)
         #   more modular implementation with file exists check
         ##  TODO check if file is actually a csv file
+        puts -3
         return 0 if File.exist?(file_name)
+        puts -4
         add_error("Error: no such table: #{file_name.split(".")[0]}")
         return -1
     end
@@ -219,7 +221,7 @@ class MySqliteRequest
 # It will be prototyped:
 
     def where(column_name, criteria)
-        return false if check_for_error
+        return self if check_for_error
 
         # header = @from_table[:headers]
         # where_column = header.find_index(column_name)
@@ -425,11 +427,14 @@ class MySqliteRequest
 #   8
 # Update Implement a method to update which will receive a table name (filename). It will continue to build the request. An update request might be associated with a where request.
     def update(table_name)
+        puts -5
         if !check_filename(table_name)
+            puts -1
             return -1
         end
 
         if check_sqlite_statement("UPDATE") == -2
+            puts -2
             return -2
         end
 
@@ -438,6 +443,7 @@ class MySqliteRequest
         @update_table = get_table_data(table_name)
         puts "Updating table..."
         self
+        # puts "upend\n"
     end
 
 #   9
@@ -464,15 +470,15 @@ class MySqliteRequest
 
 #   11
 # Run Implement a run method and it will execute the request.
-    def run
-        return if @my_sqlite_request.empty?
+    def run()
+        return self if @my_sqlite_request.empty?
 
         my_sqlite_request.each do |request|
             if request.start_with?("UPDATE")
                 run_update();
             end
         end
-
+        self
     end
 
     def run_update()
@@ -488,13 +494,12 @@ class MySqliteRequest
               end
             end
             updated_rows << row
-          end
+        end
 
-          CSV.open(table_name, "w", write_headers: true, headers: headers) do |csv|
+        CSV.open(table_name, "w", write_headers: true, headers: headers) do |csv|
             updated_rows.each do |row|
-              csv << row
+                csv << row
             end
         end
     end
-
 end
