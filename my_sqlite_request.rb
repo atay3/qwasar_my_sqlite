@@ -41,9 +41,6 @@ class MySqliteRequest
         @where_result = nil
         @insert_values_data = nil
         @query_result = []
-
-        #   warren test - temp_table
-        @temp_table
     end
 
     # def initialize()
@@ -53,7 +50,7 @@ class MySqliteRequest
     # end
 
     def check_for_error
-        @request_errors.length > 0 || false
+        @request_errors.empty?
     end
 
     def get_my_sqlite_request
@@ -150,7 +147,9 @@ class MySqliteRequest
     def check_filename(file_name)
         #   more modular implementation with file exists check
         ##  TODO check if file is actually a csv file
+        puts -3
         return 0 if File.exist?(file_name)
+        puts -4
         add_error("Error: no such table: #{file_name.split(".")[0]}")
         return -1
     end
@@ -178,8 +177,7 @@ class MySqliteRequest
             #   update ongoing request
             add_my_sqlite_request("FROM")
             #   read and save csv contents
-            # @from_table = get_table_data(table_name)
-            @temp_table = get_table_data(table_name)
+            @from_table = get_table_data(table_name)
             # p @from_table
             # return 0
             return self
@@ -223,7 +221,7 @@ class MySqliteRequest
 # It will be prototyped:
 
     def where(column_name, criteria)
-        return false if check_for_error
+        return self if check_for_error
 
         # header = @from_table[:headers]
         # where_column = header.find_index(column_name)
@@ -429,14 +427,23 @@ class MySqliteRequest
 #   8
 # Update Implement a method to update which will receive a table name (filename). It will continue to build the request. An update request might be associated with a where request.
     def update(table_name)
+        puts -5
+        if !check_filename(table_name)
+            puts -1
+            return -1
+        end
+
         if check_sqlite_statement("UPDATE") == -2
+            puts -2
             return -2
         end
+
         add_my_sqlite_request("UPDATE #{table_name}")
-        @table_name = table_name
-        # @update_table = get_table_data(table_name)
+        # @table_name = table_name
+        @update_table = get_table_data(table_name)
         puts "Updating table..."
         self
+        # puts "upend\n"
     end
 
 #   9
@@ -463,29 +470,36 @@ class MySqliteRequest
 
 #   11
 # Run Implement a run method and it will execute the request.
-    # def run
-    #     return false if @update_data.nil? || @table_data.nil?
+    def run()
+        return self if @my_sqlite_request.empty?
 
-    #     headers = get_table_headers
-    #     update_indexes = @update_data.map { |col, _| headers.find_index(col) }
+        my_sqlite_request.each do |request|
+            if request.start_with?("UPDATE")
+                run_update();
+            end
+        end
+        self
+    end
 
-    #     if update_indexes.any?(&:nil?)
-    #         puts "Update failed - one or more columns not found"
-    #         return -3
-    #     end
+    def run_update()
+        table_name = @from_table[:name]
+        headers = @table_data.first.headers
 
-    #     # Get matching rows (from where, or all if no where)
-    #     target_rows = @where_result || @table_data[1..-1]
+        updated_rows = []
 
-    #     target_rows.each do |row|
-    #         @update_data.each do |col, new_val|
-    #             col_index = headers.find_index(col)
-    #             row[col_index] = new_val
-    #         end
-    #     end
+        @table_data.each do |row|
+            if @where_result.nil? || row[@where_result[:column]] == @where_result[:value]
+              @update_data.each do |col, val|
+                row[col] = val
+              end
+            end
+            updated_rows << row
+        end
 
-    #     puts "Update successful"
-    #     return 1
-    # end
-
+        CSV.open(table_name, "w", write_headers: true, headers: headers) do |csv|
+            updated_rows.each do |row|
+                csv << row
+            end
+        end
+    end
 end
