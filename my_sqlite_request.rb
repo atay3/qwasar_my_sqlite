@@ -471,14 +471,13 @@ class MySqliteRequest
 #   11
 # Run Implement a run method and it will execute the request.
     def run()
-        return self if @my_sqlite_request.empty?
+        return "empty" if @my_sqlite_request.empty?
 
         my_sqlite_request.each do |request|
             if request.start_with?("UPDATE")
                 run_update();
             end
         end
-        self
     end
 
     def run_update()

@@ -16,10 +16,10 @@ require_relative '../my_sqlite_cli'
 
 # Initialize and build the update request
 request = MySqliteRequest.new
-request.update("../test_data/student.csv")
+request.update("student")
        .set({ "ID" => "7", "AGE" => "11" })
        .where("NAME", "a")
-       .run()
+request.run
 
 # ---- BEGIN mock .run implementation for testing ----
 # simulate the update logic since `.run` is not implemented
