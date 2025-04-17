@@ -3,16 +3,17 @@ require './my_sqlite_cli'
 
 # Print the CSV before update
 puts "BEFORE UPDATE:"
-CSV.foreach("test_data/student.csv", headers: true) do |row|
+CSV.foreach("student.csv", headers: true) do |row|
   puts row.to_h
 end
 
 # Initialize and build the update request
 request = MySqliteRequest.new
+# request.update("../test_data/student.csv")
 request.update("student")
        .set({ "ID" => "7", "AGE" => "11" })
        .where("NAME", "a")
-       .run
+       .run()
 
 # ---- BEGIN mock .run implementation for testing ----
 # simulate the update logic since `.run` is not implemented

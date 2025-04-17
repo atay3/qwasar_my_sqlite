@@ -50,7 +50,8 @@ class MySqliteRequest
     # end
 
     def check_for_error
-        @request_errors.length > 0 || false
+        # @request_errors.length > 0 || false
+        @request_errors.empty?
     end
 
     def get_my_sqlite_request
@@ -147,8 +148,10 @@ class MySqliteRequest
     def check_filename(file_name)
         #   more modular implementation with file exists check
         ##  TODO check if file is actually a csv file
+        puts -3
         return 0 if File.exist?(file_name)
         add_error("Error: no such table: #{file_name.split(".")[0]}")
+        puts -4
         return -1
     end
 
@@ -219,7 +222,7 @@ class MySqliteRequest
 # It will be prototyped:
 
     def where(column_name, criteria)
-        return false if check_for_error
+        return self if check_for_error
 
         # header = @from_table[:headers]
         # where_column = header.find_index(column_name)
@@ -253,10 +256,12 @@ class MySqliteRequest
             end
             @where_result = result
             p @where_result
-            return 1
+            # return 1
+            self
         end
         puts "where fail - invalid column(s)"
-        return -1
+        # return -1
+        self
     end
 #   4
 # Join Implement a join method which will load another filename_db and will join both database on a on column.
@@ -425,17 +430,22 @@ class MySqliteRequest
 #   8
 # Update Implement a method to update which will receive a table name (filename). It will continue to build the request. An update request might be associated with a where request.
     def update(table_name)
+        puts -5
         if !check_filename(table_name)
+            puts -1
             return -1
         end
 
         if check_sqlite_statement("UPDATE") == -2
+            puts -2
             return -2
         end
 
         add_my_sqlite_request("UPDATE #{table_name}")
         # @table_name = table_name
-        @update_table = get_table_data(table_name)
+        # @update_table = get_table_data(table_name)
+        @table_data = get_table_data(table_name)
+
         puts "Updating table..."
         self
     end
@@ -454,7 +464,7 @@ class MySqliteRequest
 
 #   10
 # Delete Implement a delete method. It set the request to delete on all matching row. It will continue to build the request. An delete request might be associated with a where request.
-    def delete
+    def delete()
         if check_sqlite_statement("DELETE") == -8
             return -8
         end
@@ -464,19 +474,19 @@ class MySqliteRequest
 
 #   11
 # Run Implement a run method and it will execute the request.
-    def run
-        return if @my_sqlite_request.empty?
+    def run()
+        return self if @my_sqlite_request.empty?
 
         my_sqlite_request.each do |request|
             if request.start_with?("UPDATE")
                 run_update();
             end
         end
-
+        self
     end
 
     def run_update()
-        table_name = @from_table[:name]
+        table_name = @table_data[:name]
         headers = @table_data.first.headers
 
         updated_rows = []
