@@ -132,7 +132,9 @@ class MySqliteRequest
     # end
     #   old idea for headers - changed to get current table headers
 
-    def read_csv_file(file_name)
+    def read_csv_file(table_name)
+        file_name = table_name.end_with?(".csv") ? table_name : "#{table_name}.csv"
+        # CSV.read(file_name, headers: true)
         return CSV.read(file_name, converters: :all)
     end
     
@@ -442,6 +444,7 @@ class MySqliteRequest
         end
 
         add_my_sqlite_request("UPDATE #{table_name}")
+        puts table_name
         # @table_name = table_name
         # @update_table = get_table_data(table_name)
         @table_data = get_table_data(table_name)
@@ -480,6 +483,8 @@ class MySqliteRequest
         my_sqlite_request.each do |request|
             if request.start_with?("UPDATE")
                 run_update();
+            elsif request.start_with?("SET")
+                run_set();
             end
         end
         self
@@ -487,7 +492,10 @@ class MySqliteRequest
 
     def run_update()
         table_name = @table_data[:name]
-        headers = @table_data.first.headers
+        puts table_name
+        # headers = @table_data.first.headers
+        @table_data = CSV.read(filename, headers: true)
+
 
         updated_rows = []
 
@@ -500,11 +508,15 @@ class MySqliteRequest
             updated_rows << row
           end
 
-          CSV.open(table_name, "w", write_headers: true, headers: headers) do |csv|
+          CSV.open("#{table_name}.csv", "w", write_headers: true, headers: headers) do |csv| #Might need to change this
             updated_rows.each do |row|
               csv << row
             end
         end
+    end
+
+    def run_set()
+        #
     end
 
 end
