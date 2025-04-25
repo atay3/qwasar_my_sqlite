@@ -1,5 +1,6 @@
-require './my_sqlite_request'
-require './my_sqlite_cli'
+require_relative '../my_sqlite_request'
+require_relative '../my_sqlite_cli'
+
 
 # Print the CSV before update
 puts "BEFORE UPDATE:"

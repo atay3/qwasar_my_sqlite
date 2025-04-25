@@ -152,6 +152,7 @@ class MySqliteRequest
         ##  TODO check if file is actually a csv file
         puts -3
         return 0 if File.exist?(file_name)
+        puts -4
         add_error("Error: no such table: #{file_name.split(".")[0]}")
         puts -4
         return -1
@@ -451,6 +452,7 @@ class MySqliteRequest
 
         puts "Updating table..."
         self
+        # puts "upend\n"
     end
 
 #   9
@@ -506,11 +508,12 @@ class MySqliteRequest
               end
             end
             updated_rows << row
-          end
+        end
 
+        CSV.open(table_name, "w", write_headers: true, headers: headers) do |csv|
           CSV.open("#{table_name}.csv", "w", write_headers: true, headers: headers) do |csv| #Might need to change this
             updated_rows.each do |row|
-              csv << row
+                csv << row
             end
         end
     end
