@@ -255,7 +255,8 @@ class MySqliteRequest
             #   no results from where query
             if result.empty?
                 puts "where fail - no query results"
-                return 0
+                # return 0
+                self
             end
             @where_result = result
             p @where_result
@@ -494,9 +495,11 @@ class MySqliteRequest
 
     def run_update()
         table_name = @table_data[:name]
-        puts table_name
-        # headers = @table_data.first.headers
+        puts "running update..."
+        filename = table_name.end_with?(".csv") ? table_name : "#{table_name}.csv"
         @table_data = CSV.read(filename, headers: true)
+        headers = @table_data.headers
+        
 
 
         updated_rows = []
@@ -511,7 +514,6 @@ class MySqliteRequest
         end
 
         CSV.open(table_name, "w", write_headers: true, headers: headers) do |csv|
-          CSV.open("#{table_name}.csv", "w", write_headers: true, headers: headers) do |csv| #Might need to change this
             updated_rows.each do |row|
                 csv << row
             end
