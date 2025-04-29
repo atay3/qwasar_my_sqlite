@@ -35,12 +35,13 @@ class MySqliteRequest
     def initialize()
         @my_sqlite_request = []
         @request_errors = []
-        @from_table = {}
+        # @from_table = {}
         @table_data = nil
         @selected_columns = nil
         @where_result = nil
         @insert_values_data = nil
         @query_result = []
+        @file_name = nil
     end
 
     # def initialize()
@@ -59,8 +60,9 @@ class MySqliteRequest
     end
 
     def add_my_sqlite_request(statement)
-        p "current #{@my_sqlite_request}"
+        # p "current #{@my_sqlite_request}"
         @my_sqlite_request.append(statement)
+        p "current #{@my_sqlite_request}"
     end
 
     def check_duplicate_statements(statement, request_query)
@@ -133,9 +135,9 @@ class MySqliteRequest
     #   old idea for headers - changed to get current table headers
 
     def read_csv_file(table_name)
-        file_name = table_name.end_with?(".csv") ? table_name : "#{table_name}.csv"
-        # CSV.read(file_name, headers: true)
-        return CSV.read(file_name, converters: :all)
+        @file_name = table_name.end_with?(".csv") ? table_name : "#{table_name}.csv"
+        return CSV.read(@file_name, headers: true)
+        # return CSV.read(@file_name, converters: :all)
     end
     
     def add_error(error_msg)
@@ -462,7 +464,7 @@ class MySqliteRequest
         if check_sqlite_statement("SET") == -7
             return -7
         end
-        add_my_sqlite_request("SET #{data}")
+        add_my_sqlite_request("SET")
         @update_data = data
         puts "setting data..."
         self
@@ -494,17 +496,18 @@ class MySqliteRequest
     end
 
     def run_update()
-        table_name = @table_data[:name]
+        # table_name = @table_data[:name]
         puts "running update..."
-        filename = table_name.end_with?(".csv") ? table_name : "#{table_name}.csv"
-        @table_data = CSV.read(filename, headers: true)
-        headers = @table_data.headers
-        
-
+        # @file_name = table_name.end_with?(".csv") ? table_name : "#{table_name}.csv"
+        # @table_data = CSV.read(@file_name, headers: true)
+        # headers = @table_data.headers
+        table_name = @table_data[:name]
+        rows = @table_data[:data]
+        headers = @table_data[:headers]
 
         updated_rows = []
 
-        @table_data.each do |row|
+        rows.each do |row|
             if @where_result.nil? || row[@where_result[:column]] == @where_result[:value]
               @update_data.each do |col, val|
                 row[col] = val
@@ -513,15 +516,39 @@ class MySqliteRequest
             updated_rows << row
         end
 
-        CSV.open(table_name, "w", write_headers: true, headers: headers) do |csv|
+        CSV.open(@file_name, "w", write_headers: true, headers: headers) do |csv|
             updated_rows.each do |row|
                 csv << row
             end
         end
     end
 
-    def run_set()
-        #
+    def run_set
+        @table_data[:data].each do |row|
+          if @where_result.nil? || row[@where_result[:column]] == @where_result[:value]
+            @update_data.each do |col, val|
+              row[col] = val
+            end
+          end
+        end
+      
+        save_table
+        puts "Set new info in table and saving result"
+      end      
+
+      def save_table
+        table_name = @table_data[:name]
+        headers = @table_data[:headers]
+        rows = @table_data[:data]
+      
+        file_name = table_name.end_with?(".csv") ? table_name : "#{table_name}.csv"
+      
+        CSV.open(file_name, "w", write_headers: true, headers: headers) do |csv|
+          rows.each do |row|
+            csv << row
+          end
+        end
     end
+      
 
 end

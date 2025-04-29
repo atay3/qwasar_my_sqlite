@@ -11,8 +11,8 @@ end
 # Initialize and build the update request
 request = MySqliteRequest.new
 request.update("student")
-       .set({ "ID" => "7", "AGE" => "11" })
-       .where("NAME", "a")
+       .set({ "id" => "7", "age" => "11" })
+       .where("name", "a")
        .run()
 
 # ---- BEGIN mock .run implementation for testing ----
