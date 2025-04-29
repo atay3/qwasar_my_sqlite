@@ -129,14 +129,10 @@ class MySqliteRequest
     def get_table_headers(table_data)
         return table_data[0]
     end
-    # def get_table_headers()
-    #     return @table_data[0]
-    # end
-    #   old idea for headers - changed to get current table headers
 
     def read_csv_file(table_name)
         @file_name = table_name.end_with?(".csv") ? table_name : "#{table_name}.csv"
-        return CSV.read(@file_name, headers: true)
+        return CSV.read(@file_name, headers: true, converters: :all)
         # return CSV.read(@file_name, converters: :all)
     end
     
@@ -497,7 +493,7 @@ class MySqliteRequest
 
     def run_update()
         # table_name = @table_data[:name]
-        puts "running update..."
+        # puts "running update..."
         # @file_name = table_name.end_with?(".csv") ? table_name : "#{table_name}.csv"
         # @table_data = CSV.read(@file_name, headers: true)
         # headers = @table_data.headers
@@ -507,14 +503,29 @@ class MySqliteRequest
 
         updated_rows = []
 
+        puts "Rows before update:"
+        rows.each { |row| puts row.inspect }
+        puts "Where condition: #{@where_result}"
+        if @where_result.nil?
+            puts "Error: No where condition provided."
+            return -1
+        end
+
         rows.each do |row|
-            if @where_result.nil? || row[@where_result[:column]] == @where_result[:value]
-              @update_data.each do |col, val|
-                row[col] = val
-              end
+            if row[@where_result[:column]] == @where_result[:value]
+                @update_data.each do |col, val|
+                    if row.has_key?(col)
+                        row[col] = val
+                    else
+                        puts "Warning: Column #{col} does not exist in row."
+                    end
+                end
             end
             updated_rows << row
         end
+
+        puts "Updated rows:"
+        updated_rows.each { |row| puts row.inspect }
 
         CSV.open(@file_name, "w", write_headers: true, headers: headers) do |csv|
             updated_rows.each do |row|
@@ -524,10 +535,14 @@ class MySqliteRequest
     end
 
     def run_set
+        if @where_result.nil?
+            puts "Error: No where condition provided."
+            return -1
+        end
         @table_data[:data].each do |row|
-          if @where_result.nil? || row[@where_result[:column]] == @where_result[:value]
+          if row[@where_result[:column]] == @where_result[:value]
             @update_data.each do |col, val|
-              row[col] = val
+                row[col] = val
             end
           end
         end
@@ -537,16 +552,16 @@ class MySqliteRequest
       end      
 
       def save_table
-        table_name = @table_data[:name]
+        # table_name = @table_data[:name]
         headers = @table_data[:headers]
         rows = @table_data[:data]
       
-        file_name = table_name.end_with?(".csv") ? table_name : "#{table_name}.csv"
+        # file_name = table_name.end_with?(".csv") ? table_name : "#{table_name}.csv"
       
-        CSV.open(file_name, "w", write_headers: true, headers: headers) do |csv|
-          rows.each do |row|
-            csv << row
-          end
+        CSV.open(@file_name, "w", write_headers: true, headers: headers) do |csv|
+            rows.each do |row|
+                csv << row
+            end
         end
     end
       
