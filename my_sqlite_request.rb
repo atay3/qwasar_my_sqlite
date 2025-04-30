@@ -444,7 +444,7 @@ class MySqliteRequest
         end
 
         add_my_sqlite_request("UPDATE #{table_name}")
-        puts table_name
+        # puts table_name
         # @table_name = table_name
         # @update_table = get_table_data(table_name)
         @table_data = get_table_data(table_name)
