@@ -9,42 +9,33 @@ require 'csv'
 
 class MySqliteRequest
     #   It will have a similar behavior than a request on the real sqlite
-    #   All methods, except run, will return an instance of my_sqlite_request
+    #   All methods, except run, will return an instance of request_queue
     #   You will build the request by progressive call and execute the request by calling run
     #   Each row must have an ID.
     #   We will do only 1 join and can do one or multiple where(s) per request.
 
-    # @my_sqlite_request = []
+    attr_accessor :request_queue,:table_data, :insert_values_data,
 
-    # @current_table = nil
-
-    # @table_data = nil
-    # @selected_columns = nil
-    # @where_result = nil
-    # @insert_values_data = nil
-    # @query_result = []
-
-    # @my_sqlite_request = []
-    # @request_errors = []
-    # @from_table = {}
-
-    attr_accessor :table_data, :from_table, :insert_values_data, :my_sqlite_request
-    #, :from_table_one, :from_table_two
     attr_reader :request_errors
-#     Constructor It will be prototyped:
+#   Constructor It will be prototyped:
     def initialize()
-        @my_sqlite_request = []
+        #   request
+        @request_queue = []
         @request_errors = []
-        @from_table = {}
+        #   table data
         @table_data = nil
+        #   selected columns
         @selected_columns = nil
+        #   where_result
         @where_result = nil
+        #   values for insert?
         @insert_values_data = nil
-        @query_result = []
+        #   final result for queue
+        @request_result = []
     end
 
     # def initialize()
-    #     @my_sqlite_request = []
+    #     @request_queue = []
     #     @request_errors = []
     #     @from_table = {}
     # end
@@ -53,19 +44,19 @@ class MySqliteRequest
         @request_errors.empty?
     end
 
-    def get_my_sqlite_request
-        @my_sqlite_request
+    def get_request_queue
+        @request_queue
     end
 
-    def add_my_sqlite_request(statement)
-        p "current #{@my_sqlite_request}"
-        @my_sqlite_request.append(statement)
+    def add_request_queue(statement)
+        p "current #{@request_queue}"
+        @request_queue.append(statement)
     end
 
     def check_duplicate_statements(statement, request_query)
         #   check if prior requests
-        if get_my_sqlite_request.length > 0
-            is_duplicate = request_query.any? {|query| @my_sqlite_request.include?(query)}
+        if get_request_queue.length > 0
+            is_duplicate = request_query.any? {|query| @request_queue.include?(query)}
             if is_duplicate
                 # add_error("only 1 #{statement} per request [SELECT | UPDATE | INSERT | DELETE]")
                 add_error("only 1 #{statement} per request [#{request_query.join(" | ")}]")
@@ -79,9 +70,9 @@ class MySqliteRequest
     #   1 join -> many wheres
     #   0 join -> 1 where
     def check_duplicate_where_statement(statement)
-        join_count = @my_sqlite_request.count("JOIN")
+        join_count = @request_queue.count("JOIN")
         if join_count == 0
-            where_count = @my_sqlite_request.count("WHERE")
+            where_count = @request_queue.count("WHERE")
             if where_count == 1
                 add_error("only 1 #{statement} per 0 JOIN or many per 1 JOIN")
                 return true
@@ -175,7 +166,7 @@ class MySqliteRequest
         statement_result = check_sqlite_statement("FROM")
         if statement_result >= 0
             #   update ongoing request
-            add_my_sqlite_request("FROM")
+            add_request_queue("FROM")
             #   read and save csv contents
             @from_table = get_table_data(table_name)
             # p @from_table
@@ -305,7 +296,7 @@ class MySqliteRequest
                 # @table_data = table_combined
                 @table_data = join_combine_tables(column_on_db_a, table_b_hash, column_on_db_b)
                 # p @table_data
-                add_my_sqlite_request("JOIN")
+                add_request_queue("JOIN")
                 return 0
             end
         end
@@ -368,7 +359,7 @@ class MySqliteRequest
         valid_order = check_order(order)
         if valid_order != 0
             @table_data = order_sort(current_table, column_name, valid_order, table_headers)
-            add_my_sqlite_request("ORDER")
+            add_request_queue("ORDER")
             return 0
         end
         add_error("Invalid Order - [ ASC | DESC ] only")
@@ -389,7 +380,7 @@ class MySqliteRequest
                 #   update @insert_values_data
                 @insert_values_data = {insert: get_table_data(table_name)}
                 #   add sqlite request
-                add_my_sqlite_request("INSERT")
+                add_request_queue("INSERT")
                 return 0
             end
             add_error("duplicate statement - only 1 of each [INSERT | VALUES]")
@@ -416,7 +407,7 @@ class MySqliteRequest
                 #   check number of elements
                 #   check element types
                 #   add sqlite request
-            add_my_sqlite_request("VALUE")
+            add_request_queue("VALUE")
     #     #   update @insert_values_data
                 return 0
             end
@@ -438,7 +429,7 @@ class MySqliteRequest
             return -2
         end
 
-        add_my_sqlite_request("UPDATE #{table_name}")
+        add_request_queue("UPDATE #{table_name}")
         # @table_name = table_name
         @update_table = get_table_data(table_name)
         puts "Updating table..."
@@ -452,7 +443,7 @@ class MySqliteRequest
         if check_sqlite_statement("SET") == -7
             return -7
         end
-        add_my_sqlite_request("SET #{data}")
+        add_request_queue("SET #{data}")
         @update_data = data
         puts "setting data..."
         self
@@ -464,22 +455,26 @@ class MySqliteRequest
         if check_sqlite_statement("DELETE") == -8
             return -8
         end
-        add_my_sqlite_request("DELETE")
+        add_request_queue("DELETE")
         self # Return self for chaining
     end
 
 #   11
 # Run Implement a run method and it will execute the request.
     def run()
-        return "empty" if @my_sqlite_request.empty?
-
-        my_sqlite_request.each do |request|
-            if request.start_with?("UPDATE")
-                run_update();
-            end
-        end
+        execute_requests()
     end
 
+    def execute_requests()
+        #   check if request is empty
+        return "request queue - empty" if @request_queue.empty?
+        #   execute request(s)
+        @queue_result = @request_queue.map {
+            #   iterate through the queue and execute each section
+            
+        }
+    end
+    
     def run_update()
         table_name = @from_table[:name]
         headers = @table_data.first.headers
