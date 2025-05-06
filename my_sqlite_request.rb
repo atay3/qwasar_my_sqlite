@@ -14,8 +14,7 @@ class MySqliteRequest
     #   Each row must have an ID.
     #   We will do only 1 join and can do one or multiple where(s) per request.
 
-    attr_accessor :request_queue,:table_data, :insert_values_data,
-
+    attr_accessor :request_queue,:table_data, :insert_values_data
     attr_reader :request_errors
 #   Constructor It will be prototyped:
     def initialize()
@@ -33,12 +32,6 @@ class MySqliteRequest
         #   final result for queue
         @request_result = []
     end
-
-    # def initialize()
-    #     @request_queue = []
-    #     @request_errors = []
-    #     @from_table = {}
-    # end
 
     def check_for_error
         @request_errors.empty?
@@ -467,7 +460,7 @@ class MySqliteRequest
 
     def execute_requests()
         #   check if request is empty
-        return "request queue - empty" if @request_queue.empty?
+        return "request queue - empty" if check_for_error()
         #   execute request(s)
         @queue_result = @request_queue.map {
             #   iterate through the queue and execute each section
