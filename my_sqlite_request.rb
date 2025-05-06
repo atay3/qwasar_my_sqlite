@@ -463,9 +463,11 @@ class MySqliteRequest
         return "request queue - empty" if check_for_error()
         #   execute request(s)
         @queue_result = @request_queue.map {
-            #   iterate through the queue and execute each section
-            
+            #   iterate through the queue and execute each request
+            #   TODO - add case for each request
         }
+        # print out 
+        p @queue_result
     end
     
     def run_update()
