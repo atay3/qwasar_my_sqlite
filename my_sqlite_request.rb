@@ -14,19 +14,6 @@ class MySqliteRequest
     #   Each row must have an ID.
     #   We will do only 1 join and can do one or multiple where(s) per request.
 
-    # @my_sqlite_request = []
-
-    # @current_table = nil
-
-    # @table_data = nil
-    # @selected_columns = nil
-    # @where_result = nil
-    # @insert_values_data = nil
-    # @query_result = []
-
-    # @my_sqlite_request = []
-    # @request_errors = []
-    # @from_table = {}
 
     attr_accessor :table_data, :from_table, :insert_values_data, :my_sqlite_request
     #, :from_table_one, :from_table_two
@@ -43,12 +30,6 @@ class MySqliteRequest
         @query_result = []
         @file_name = nil
     end
-
-    # def initialize()
-    #     @my_sqlite_request = []
-    #     @request_errors = []
-    #     @from_table = {}
-    # end
 
     def check_for_error
         # @request_errors.length > 0 || false
@@ -481,30 +462,36 @@ class MySqliteRequest
     def run()
         return self if @my_sqlite_request.empty?
 
-        my_sqlite_request.each do |request|
-            if request.start_with?("UPDATE")
-                run_update();
-            elsif request.start_with?("SET")
-                run_set();
+        run_from
+
+        @my_sqlite_request.each do |request|
+            case request
+            when /^UPDATE/
+                run_update
+            when /^DELETE/
+                run_delete
+            when /^SET/
+                run_set
             end
-        end
+          end
         self
     end
 
+    def run_from()
+        from_clause = @my_sqlite_request.find { |req| req.start_with?("FROM") }
+        return unless from_clause
+      
+        @table_data = get_table_data(table_name)
+        table_name = @table_data[:name]
+      end      
+
     def run_update()
-        # table_name = @table_data[:name]
-        # puts "running update..."
-        # @file_name = table_name.end_with?(".csv") ? table_name : "#{table_name}.csv"
-        # @table_data = CSV.read(@file_name, headers: true)
-        # headers = @table_data.headers
         table_name = @table_data[:name]
         rows = @table_data[:data]
         headers = @table_data[:headers]
 
         updated_rows = []
 
-        puts "Rows before update:"
-        rows.each { |row| puts row.inspect }
         puts "Where condition: #{@where_result}"
         if @where_result.nil?
             puts "Error: No where condition provided."
@@ -527,14 +514,12 @@ class MySqliteRequest
         puts "Updated rows:"
         updated_rows.each { |row| puts row.inspect }
 
-        CSV.open(@file_name, "w", write_headers: true, headers: headers) do |csv|
-            updated_rows.each do |row|
-                csv << row
-            end
-        end
+        @table_data[:data] = updated_rows
+        save_table
+
     end
 
-    def run_set
+    def run_set()
         if @where_result.nil?
             puts "Error: No where condition provided."
             return -1
@@ -551,13 +536,11 @@ class MySqliteRequest
         puts "Set new info in table and saving result"
       end      
 
-      def save_table
+      def save_table()
         # table_name = @table_data[:name]
         headers = @table_data[:headers]
         rows = @table_data[:data]
-      
-        # file_name = table_name.end_with?(".csv") ? table_name : "#{table_name}.csv"
-      
+            
         CSV.open(@file_name, "w", write_headers: true, headers: headers) do |csv|
             rows.each do |row|
                 csv << row
@@ -565,5 +548,6 @@ class MySqliteRequest
         end
     end
       
-
+    def run_delete()
+    end
 end
