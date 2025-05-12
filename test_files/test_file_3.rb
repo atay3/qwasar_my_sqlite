@@ -16,8 +16,11 @@ require_relative '../my_sqlite_cli'
 
 # Initialize and build the update request
 request = MySqliteRequest.new
-result = request.run
-p result
+request = request.from("nba_players.csv")
+p "from #{request}"
+# result = request.run
+# p result
+
 # request.update("student")
 #        .set({ "ID" => "7", "AGE" => "11" })
 #        .where("NAME", "a")

@@ -34,7 +34,7 @@ class MySqliteRequest
     end
 
     def check_for_error
-        @request_errors.empty?
+        !@request_errors.empty?
     end
 
     def get_request_queue
@@ -128,14 +128,49 @@ class MySqliteRequest
 # (technically a table_name is also a filename (.csv))
 # It will be prototyped:
 
+
+    def check_file_name_length(file_name)
+        #   minimum name length - 5 i.e. "a.csv"
+        if file_name.length < 5
+            add_error("invalid file_name length\n")
+            return -1
+        #   ending in .csv
+        elsif file_name[-4..-1] != ".csv"
+            add_error("invalid file extension\n")
+            return -2
+        #   character check - "a..z_"
+        elsif !/[a-z_]/.match(file_name)
+            add_error("invalid filename characters")
+            return -3
+        end
+        p "file_name pass\n"
+        return 0
+    end
+
+    def check_file_exist(file_name)
+        if File.exist?(file_name)
+            p "File exist msg\n"
+            return 0
+        end
+        add_error("File does not exist.")
+        return -1
+    end
+
     def check_filename(file_name)
         #   more modular implementation with file exists check
         ##  TODO check if file is actually a csv file
-        puts -3
-        return 0 if File.exist?(file_name)
-        puts -4
-        add_error("Error: no such table: #{file_name.split(".")[0]}")
-        return -1
+        puts "check_filename [#{file_name}]\n"
+        #   check file_name length
+        if !check_file_name_length(file_name)
+            return -1
+        end
+        if check_file_exist(file_name)
+            return 0
+        end
+        return -2
+        #   previous code, not in correct area
+        # add_error("Error: no such table: #{file_name.split(".")[0]}")
+        # return 0
     end
 
     #   TODO check for specific .csv files?
@@ -152,9 +187,14 @@ class MySqliteRequest
 
     #   for checking csv
     def from(table_name)
+        #   check for errors
         return false if check_for_error
         #   check if file is valid
         return -1 if !check_filename(table_name)
+        #   check for errors again?
+        return false if check_for error
+        p "after check_filename\n"
+        ####TODO leftoff here
         #   check if FROM already requested
         statement_result = check_sqlite_statement("FROM")
         if statement_result >= 0
