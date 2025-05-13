@@ -1,8 +1,0 @@
-[updated]
--fixed check_for_error
--commented out previous code on lines 171-173
-
-[added]
--check_file_name_length class method
--check_filename class method
--notes for from class method
