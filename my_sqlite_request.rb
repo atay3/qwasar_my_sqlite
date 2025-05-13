@@ -198,8 +198,6 @@ class MySqliteRequest
         return -1 if !check_filename(table_name)
         #   check for errors again?
         return false if check_for_error
-        p "after check_filename"
-        ####TODO leftoff here
         #   check if FROM already requested
         statement_result = check_sqlite_statement("FROM")
         if statement_result >= 0
@@ -207,7 +205,6 @@ class MySqliteRequest
             add_request_queue("FROM")
             #   read and save csv contents
             @table_data = get_table_data(table_name)
-            # return 0
             return self
         end
         return self
