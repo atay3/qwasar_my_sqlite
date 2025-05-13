@@ -107,8 +107,8 @@ class MySqliteRequest
         return -1
     end
 
-    def get_table_headers(table_data)
-        return table_data[0]
+    def get_table_headers
+        @table_data[:headers]
     end
     # def get_table_headers()
     #     return @table_data[0]
@@ -186,7 +186,7 @@ class MySqliteRequest
             name: table_name,
             data: read_csv_file(table_name),
         }
-        table_hash[:headers] = get_table_headers(table_hash[:data])
+        table_hash[:headers] = table_hash[:data][0]
         return table_hash
     end
 
