@@ -42,12 +42,12 @@ class MySqliteRequest
     end
 
     def add_request_queue(statement)
-        p "current #{@request_queue}"
+        p "request_queue #{@request_queue}"
         @request_queue.append(statement)
     end
 
     def check_duplicate_statements(statement, request_query)
-        #   check if prior requests
+        #   check if prior requests exist
         if get_request_queue.length > 0
             is_duplicate = request_query.any? {|query| @request_queue.include?(query)}
             if is_duplicate
@@ -122,6 +122,11 @@ class MySqliteRequest
     def add_error(error_msg)
         @request_errors.append(error_msg)
     end
+
+    #   returns request_errors FOR DEBUGGING
+    def get_request_errors
+        @request_errors
+    end
 #   1
 # From Implement a from method which must be present on each request. 
 # From will take a parameter and it will be the name of the table
@@ -149,7 +154,7 @@ class MySqliteRequest
 
     def check_file_exist(file_name)
         if File.exist?(file_name)
-            p "File exist msg\n"
+            p "File exist msg"
             return 0
         end
         add_error("File does not exist.")
@@ -192,8 +197,8 @@ class MySqliteRequest
         #   check if file is valid
         return -1 if !check_filename(table_name)
         #   check for errors again?
-        return false if check_for error
-        p "after check_filename\n"
+        return false if check_for_error
+        p "after check_filename"
         ####TODO leftoff here
         #   check if FROM already requested
         statement_result = check_sqlite_statement("FROM")
@@ -201,13 +206,11 @@ class MySqliteRequest
             #   update ongoing request
             add_request_queue("FROM")
             #   read and save csv contents
-            @from_table = get_table_data(table_name)
-            # p @from_table
+            @table_data = get_table_data(table_name)
             # return 0
             return self
         end
-        return -2
-        # self
+        return self
     end
 #   2
 #   Select Implement a where method which will take one argument 
