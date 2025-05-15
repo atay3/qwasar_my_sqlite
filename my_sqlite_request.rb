@@ -9,47 +9,47 @@ require 'csv'
 
 class MySqliteRequest
     #   It will have a similar behavior than a request on the real sqlite
-    #   All methods, except run, will return an instance of my_sqlite_request
+    #   All methods, except run, will return an instance of request_queue
     #   You will build the request by progressive call and execute the request by calling run
     #   Each row must have an ID.
     #   We will do only 1 join and can do one or multiple where(s) per request.
 
-
-    attr_accessor :table_data, :from_table, :insert_values_data, :my_sqlite_request
-    #, :from_table_one, :from_table_two
+    attr_accessor :request_queue,:table_data, :insert_values_data
     attr_reader :request_errors
-#     Constructor It will be prototyped:
+#   Constructor It will be prototyped:
     def initialize()
-        @my_sqlite_request = []
+        #   request
+        @request_queue = []
         @request_errors = []
-        # @from_table = {}
+        #   table data
         @table_data = nil
+        #   selected columns
         @selected_columns = nil
+        #   where_result
         @where_result = nil
+        #   values for insert?
         @insert_values_data = nil
-        @query_result = []
-        @file_name = nil
+        #   final result for queue
+        @request_result = []
     end
 
     def check_for_error
-        # @request_errors.length > 0 || false
-        @request_errors.empty?
+        !@request_errors.empty?
     end
 
-    def get_my_sqlite_request
-        @my_sqlite_request
+    def get_request_queue
+        @request_queue
     end
 
-    def add_my_sqlite_request(statement)
-        # p "current #{@my_sqlite_request}"
-        @my_sqlite_request.append(statement)
-        p "current #{@my_sqlite_request}"
+    def add_request_queue(statement)
+        p "request_queue #{@request_queue}"
+        @request_queue.append(statement)
     end
 
     def check_duplicate_statements(statement, request_query)
-        #   check if prior requests
-        if get_my_sqlite_request.length > 0
-            is_duplicate = request_query.any? {|query| @my_sqlite_request.include?(query)}
+        #   check if prior requests exist
+        if get_request_queue.length > 0
+            is_duplicate = request_query.any? {|query| @request_queue.include?(query)}
             if is_duplicate
                 # add_error("only 1 #{statement} per request [SELECT | UPDATE | INSERT | DELETE]")
                 add_error("only 1 #{statement} per request [#{request_query.join(" | ")}]")
@@ -63,9 +63,9 @@ class MySqliteRequest
     #   1 join -> many wheres
     #   0 join -> 1 where
     def check_duplicate_where_statement(statement)
-        join_count = @my_sqlite_request.count("JOIN")
+        join_count = @request_queue.count("JOIN")
         if join_count == 0
-            where_count = @my_sqlite_request.count("WHERE")
+            where_count = @request_queue.count("WHERE")
             if where_count == 1
                 add_error("only 1 #{statement} per 0 JOIN or many per 1 JOIN")
                 return true
@@ -107,18 +107,25 @@ class MySqliteRequest
         return -1
     end
 
-    def get_table_headers(table_data)
-        return table_data[0]
+    def get_table_headers
+        @table_data[:headers]
     end
+    # def get_table_headers()
+    #     return @table_data[0]
+    # end
+    #   old idea for headers - changed to get current table headers
 
-    def read_csv_file(table_name)
-        @file_name = table_name.end_with?(".csv") ? table_name : "#{table_name}.csv"
-        return CSV.read(@file_name, headers: true, converters: :all)
-        # return CSV.read(@file_name, converters: :all)
+    def read_csv_file(file_name)
+        return CSV.read(file_name, converters: :all)
     end
     
     def add_error(error_msg)
         @request_errors.append(error_msg)
+    end
+
+    #   returns request_errors FOR DEBUGGING
+    def get_request_errors
+        @request_errors
     end
 #   1
 # From Implement a from method which must be present on each request. 
@@ -126,15 +133,49 @@ class MySqliteRequest
 # (technically a table_name is also a filename (.csv))
 # It will be prototyped:
 
+
+    def check_file_name_length(file_name)
+        #   minimum name length - 5 i.e. "a.csv"
+        if file_name.length < 5
+            add_error("invalid file_name length\n")
+            return -1
+        #   ending in .csv
+        elsif file_name[-4..-1] != ".csv"
+            add_error("invalid file extension\n")
+            return -2
+        #   character check - "a..z_"
+        elsif !/[a-z_]/.match(file_name)
+            add_error("invalid filename characters")
+            return -3
+        end
+        p "file_name pass\n"
+        return 0
+    end
+
+    def check_file_exist(file_name)
+        if File.exist?(file_name)
+            p "File exist msg"
+            return 0
+        end
+        add_error("File does not exist.")
+        return -1
+    end
+
     def check_filename(file_name)
         #   more modular implementation with file exists check
         ##  TODO check if file is actually a csv file
-        puts -3
-        return 0 if File.exist?(file_name)
-        puts -4
-        add_error("Error: no such table: #{file_name.split(".")[0]}")
-        puts -4
-        return -1
+        puts "check_filename [#{file_name}]\n"
+        #   check file_name length
+        if !check_file_name_length(file_name)
+            return -1
+        end
+        if check_file_exist(file_name)
+            return 0
+        end
+        return -2
+        #   previous code, not in correct area
+        # add_error("Error: no such table: #{file_name.split(".")[0]}")
+        # return 0
     end
 
     #   TODO check for specific .csv files?
@@ -145,28 +186,28 @@ class MySqliteRequest
             name: table_name,
             data: read_csv_file(table_name),
         }
-        table_hash[:headers] = get_table_headers(table_hash[:data])
+        table_hash[:headers] = table_hash[:data][0]
         return table_hash
     end
 
     #   for checking csv
     def from(table_name)
+        #   check for errors
         return false if check_for_error
         #   check if file is valid
         return -1 if !check_filename(table_name)
+        #   check for errors again?
+        return false if check_for_error
         #   check if FROM already requested
         statement_result = check_sqlite_statement("FROM")
         if statement_result >= 0
             #   update ongoing request
-            add_my_sqlite_request("FROM")
+            add_request_queue("FROM")
             #   read and save csv contents
-            @from_table = get_table_data(table_name)
-            # p @from_table
-            # return 0
+            @table_data = get_table_data(table_name)
             return self
         end
-        return -2
-        # self
+        return self
     end
 #   2
 #   Select Implement a where method which will take one argument 
@@ -291,7 +332,7 @@ class MySqliteRequest
                 # @table_data = table_combined
                 @table_data = join_combine_tables(column_on_db_a, table_b_hash, column_on_db_b)
                 # p @table_data
-                add_my_sqlite_request("JOIN")
+                add_request_queue("JOIN")
                 return 0
             end
         end
@@ -354,7 +395,7 @@ class MySqliteRequest
         valid_order = check_order(order)
         if valid_order != 0
             @table_data = order_sort(current_table, column_name, valid_order, table_headers)
-            add_my_sqlite_request("ORDER")
+            add_request_queue("ORDER")
             return 0
         end
         add_error("Invalid Order - [ ASC | DESC ] only")
@@ -375,7 +416,7 @@ class MySqliteRequest
                 #   update @insert_values_data
                 @insert_values_data = {insert: get_table_data(table_name)}
                 #   add sqlite request
-                add_my_sqlite_request("INSERT")
+                add_request_queue("INSERT")
                 return 0
             end
             add_error("duplicate statement - only 1 of each [INSERT | VALUES]")
@@ -402,7 +443,7 @@ class MySqliteRequest
                 #   check number of elements
                 #   check element types
                 #   add sqlite request
-            add_my_sqlite_request("VALUE")
+            add_request_queue("VALUE")
     #     #   update @insert_values_data
                 return 0
             end
@@ -424,12 +465,9 @@ class MySqliteRequest
             return -2
         end
 
-        add_my_sqlite_request("UPDATE #{table_name}")
-        # puts table_name
+        add_request_queue("UPDATE #{table_name}")
         # @table_name = table_name
-        # @update_table = get_table_data(table_name)
-        @table_data = get_table_data(table_name)
-
+        @update_table = get_table_data(table_name)
         puts "Updating table..."
         self
         # puts "upend\n"
@@ -441,7 +479,7 @@ class MySqliteRequest
         if check_sqlite_statement("SET") == -7
             return -7
         end
-        add_my_sqlite_request("SET")
+        add_request_queue("SET #{data}")
         @update_data = data
         puts "setting data..."
         self
@@ -449,105 +487,51 @@ class MySqliteRequest
 
 #   10
 # Delete Implement a delete method. It set the request to delete on all matching row. It will continue to build the request. An delete request might be associated with a where request.
-    def delete()
+    def delete
         if check_sqlite_statement("DELETE") == -8
             return -8
         end
-        add_my_sqlite_request("DELETE")
+        add_request_queue("DELETE")
         self # Return self for chaining
     end
 
 #   11
 # Run Implement a run method and it will execute the request.
     def run()
-        return self if @my_sqlite_request.empty?
-
-        run_from
-
-        @my_sqlite_request.each do |request|
-            case request
-            when /^UPDATE/
-                run_update
-            when /^DELETE/
-                run_delete
-            when /^SET/
-                run_set
-            end
-          end
-        self
+        execute_requests()
     end
 
-    def run_from()
-        from_clause = @my_sqlite_request.find { |req| req.start_with?("FROM") }
-        return unless from_clause
-      
-        @table_data = get_table_data(table_name)
-        table_name = @table_data[:name]
-      end      
-
+    def execute_requests()
+        #   check if request is empty
+        return "request queue - empty" if check_for_error()
+        #   execute request(s)
+        @queue_result = @request_queue.map {
+            #   iterate through the queue and execute each request
+            #   TODO - add case for each request
+        }
+        # print out 
+        p @queue_result
+    end
+    
     def run_update()
-        table_name = @table_data[:name]
-        rows = @table_data[:data]
-        headers = @table_data[:headers]
+        table_name = @from_table[:name]
+        headers = @table_data.first.headers
 
         updated_rows = []
 
-        puts "Where condition: #{@where_result}"
-        if @where_result.nil?
-            puts "Error: No where condition provided."
-            return -1
-        end
-
-        rows.each do |row|
-            if row[@where_result[:column]] == @where_result[:value]
-                @update_data.each do |col, val|
-                    if row.has_key?(col)
-                        row[col] = val
-                    else
-                        puts "Warning: Column #{col} does not exist in row."
-                    end
-                end
+        @table_data.each do |row|
+            if @where_result.nil? || row[@where_result[:column]] == @where_result[:value]
+              @update_data.each do |col, val|
+                row[col] = val
+              end
             end
             updated_rows << row
         end
 
-        puts "Updated rows:"
-        updated_rows.each { |row| puts row.inspect }
-
-        @table_data[:data] = updated_rows
-        save_table
-
-    end
-
-    def run_set()
-        if @where_result.nil?
-            puts "Error: No where condition provided."
-            return -1
-        end
-        @table_data[:data].each do |row|
-          if row[@where_result[:column]] == @where_result[:value]
-            @update_data.each do |col, val|
-                row[col] = val
-            end
-          end
-        end
-      
-        save_table
-        puts "Set new info in table and saving result"
-      end      
-
-      def save_table()
-        # table_name = @table_data[:name]
-        headers = @table_data[:headers]
-        rows = @table_data[:data]
-            
-        CSV.open(@file_name, "w", write_headers: true, headers: headers) do |csv|
-            rows.each do |row|
+        CSV.open(table_name, "w", write_headers: true, headers: headers) do |csv|
+            updated_rows.each do |row|
                 csv << row
             end
         end
-    end
-      
-    def run_delete()
     end
 end
