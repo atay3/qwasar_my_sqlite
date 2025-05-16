@@ -110,10 +110,6 @@ class MySqliteRequest
     def get_table_headers
         @table_data[:headers]
     end
-    # def get_table_headers()
-    #     return @table_data[0]
-    # end
-    #   old idea for headers - changed to get current table headers
 
     def read_csv_file(file_name)
         return CSV.read(file_name, converters: :all)
@@ -465,7 +461,7 @@ class MySqliteRequest
             return -2
         end
 
-        add_request_queue("UPDATE #{table_name}")
+        add_request_queue("UPDATE")
         # @table_name = table_name
         @update_table = get_table_data(table_name)
         puts "Updating table..."
@@ -479,7 +475,7 @@ class MySqliteRequest
         if check_sqlite_statement("SET") == -7
             return -7
         end
-        add_request_queue("SET #{data}")
+        add_request_queue("SET")
         @update_data = data
         puts "setting data..."
         self
@@ -505,33 +501,116 @@ class MySqliteRequest
         #   check if request is empty
         return "request queue - empty" if check_for_error()
         #   execute request(s)
+        run_from()
         @queue_result = @request_queue.map {
             #   iterate through the queue and execute each request
-            #   TODO - add case for each request
+            case type
+            when "SELECT"
+              run_select()
+            when "UPDATE"
+              run_update()
+            when "DELETE"
+              run_delete()
+            end
         }
         # print out 
         p @queue_result
     end
     
+    # def run_update()
+    #     table_name = @from_table[:name]
+    #     headers = @table_data.first.headers
+
+    #     updated_rows = []
+
+    #     @table_data.each do |row|
+    #         if @where_result.nil? || row[@where_result[:column]] == @where_result[:value]
+    #           @update_data.each do |col, val|
+    #             row[col] = val
+    #           end
+    #         end
+    #         updated_rows << row
+    #     end
+
+    #     CSV.open(table_name, "w", write_headers: true, headers: headers) do |csv|
+    #         updated_rows.each do |row|
+    #             csv << row
+    #         end
+    #     end
+    # end
+
+    def run_from()
+        from_clause = @my_sqlite_request.find { |req| req.start_with?("FROM") }
+        return unless from_clause
+      
+        @table_data = get_table_data(table_name)
+        # table_name = @table_data[:name]
+    end      
+
     def run_update()
-        table_name = @from_table[:name]
-        headers = @table_data.first.headers
+        table_name = @table_data[:name]
+        rows = @table_data[:data]
+        # headers = @table_data[:headers]
+        headers = get_table_headers()
 
         updated_rows = []
 
-        @table_data.each do |row|
-            if @where_result.nil? || row[@where_result[:column]] == @where_result[:value]
-              @update_data.each do |col, val|
-                row[col] = val
-              end
+        puts "Where condition: #{@where_result}"
+        if @where_result.nil?
+            puts "Error: No where condition provided."
+            return -1
+        end
+
+        rows.each do |row|
+            if row[@where_result[:column]] == @where_result[:value]
+                @update_data.each do |col, val|
+                    if row.has_key?(col)
+                        row[col] = val
+                    else
+                        puts "Warning: Column #{col} does not exist in row."
+                    end
+                end
             end
             updated_rows << row
         end
 
+        puts "Updated rows:"
+        updated_rows.each { |row| puts row.inspect }
+
+        @table_data[:data] = updated_rows
+        save_table
+
+    end
+
+    def run_set()
+        if @where_result.nil?
+            puts "Error: No where condition provided."
+            return -1
+        end
+        @table_data[:data].each do |row|
+          if row[@where_result[:column]] == @where_result[:value]
+            @update_data.each do |col, val|
+                row[col] = val
+            end
+          end
+        end
+      
+        save_table
+        puts "Set new info in table and saving result"
+      end      
+
+      def save_table()
+        table_name = @table_data[:name]
+        headers = @table_data[:headers]
+        rows = @table_data[:data]
+            
         CSV.open(table_name, "w", write_headers: true, headers: headers) do |csv|
-            updated_rows.each do |row|
+            rows.each do |row|
                 csv << row
             end
         end
+    end
+      
+    def run_delete()
     end
 end
