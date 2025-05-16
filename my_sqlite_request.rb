@@ -462,8 +462,7 @@ class MySqliteRequest
         end
 
         add_request_queue("UPDATE")
-        # @table_name = table_name
-        @update_table = get_table_data(table_name)
+        @table_data = get_table_data(table_name)
         puts "Updating table..."
         self
         # puts "upend\n"
