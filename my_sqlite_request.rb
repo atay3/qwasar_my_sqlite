@@ -516,40 +516,22 @@ class MySqliteRequest
     def execute_requests()
         #   check if request is empty
         return "request queue - empty" if check_for_error()
+
         #   execute request(s)
-        # run_from()
-        # @queue_result = @request_queue.map {
-        #     #   iterate through the queue and execute each request
-        #     case type
-        #     when "SELECT"
-        #       run_select()
-        #     when "UPDATE"
-        #       run_update()
-        #     when "DELETE"
-        #       run_delete()
-        #     end
-        # }
-        @queue_result = @request_queue.map do |type|
+        @queue_result = @request_queue.map do |operation|
             #   iterate through the queue and execute each request
-            case type
-            when "SELECT"
-              run_select()
-            when "UPDATE"
-              run_update()
-            when "DELETE"
-              run_delete()
+            case operation
+            when "SELECT" then run_select()
+            when "UPDATE" then run_update()
+            when "DELETE" then run_delete()
+            when "WHERE" then next
+            else
+                add_error("Unknown operation: #{operation}")
             end
         end
         # print out 
         p @queue_result
-    end
-
-    def run_from()
-        from_clause = @my_sqlite_request.find { |req| req.start_with?("FROM") }
-        return unless from_clause
-      
-        @table_data = get_table_data(table_name + ".csv")
-    end      
+    end  
 
     def run_update()
         return unless @table_data && @update_data
