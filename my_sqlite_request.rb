@@ -42,7 +42,7 @@ class MySqliteRequest
     end
 
     def add_request_queue(statement)
-        p "request_queue #{@request_queue}"
+        # p "request_queue #{@request_queue}"
         @request_queue.append(statement)
     end
 
@@ -238,51 +238,65 @@ class MySqliteRequest
     end
 #   3
 # Where Implement a where method which will take 2 arguments: column_name and value. It will continue to build the request. During the run() you will filter the result which match the value.
-# It will be prototyped:
 
     def where(column_name, criteria)
         return self if check_for_error
 
-        # header = @from_table[:headers]
-        # where_column = header.find_index(column_name)
-        where_column = get_table_headers(column_name)
-
-        # if check_columns(column_name, header)
-        if check_columns(column_name, where_column)
-            result = []
-            # where_column = get_table_headers.find_index(column_name)
-            #   add each row of table data
-
-            @table_data[1..-1].each do |data|
-                tmp = []
-                if data[where_column] == criteria
-                    #   add each column from select query
-                    @selected_columns.each do |index|
-                        tmp.append(data[index])
-                    end
-                end
-                if row[where_column] == criteria
-                    @selected_columns.each do |index|
-                      tmp << row[index]
-                    end
-                end
-                result.append(tmp) if !tmp.empty?
-            end
-            #   no results from where query
-            if result.empty?
-                puts "where fail - no query results"
-                # return 0
-                self
-            end
-            @where_result = result
-            p @where_result
-            # return 1
-            self
+        if check_columns(column_name, get_table_headers)
+            @where_result = {
+                column: column_name,
+                value: criteria
+            }
+            add_request_queue("WHERE")
+            return self
         end
-        puts "where fail - invalid column(s)"
-        # return -1
+        add_error("Invalid column in WHERE clause")
         self
     end
+
+    # def where(column_name, criteria)
+    #     return self if check_for_error
+
+    #     # header = @from_table[:headers]
+    #     # where_column = header.find_index(column_name)
+    #     where_column = get_table_headers(column_name)
+
+    #     # if check_columns(column_name, header)
+    #     if check_columns(column_name, where_column)
+    #         result = []
+    #         # where_column = get_table_headers.find_index(column_name)
+    #         #   add each row of table data
+
+    #         @table_data[1..-1].each do |data|
+    #             tmp = []
+    #             if data[where_column] == criteria
+    #                 #   add each column from select query
+    #                 @selected_columns.each do |index|
+    #                     tmp.append(data[index])
+    #                 end
+    #             end
+    #             if row[where_column] == criteria
+    #                 @selected_columns.each do |index|
+    #                   tmp << row[index]
+    #                 end
+    #             end
+    #             result.append(tmp) if !tmp.empty?
+    #         end
+    #         #   no results from where query
+    #         if result.empty?
+    #             puts "where fail - no query results"
+    #             # return 0
+    #             self
+    #         end
+    #         @where_result = result
+    #         p @where_result
+    #         # return 1
+    #         self
+    #     end
+    #     puts "where fail - invalid column(s)"
+    #     # return -1
+    #     self
+    # end
 #   4
 # Join Implement a join method which will load another filename_db and will join both database on a on column.
 # It will be prototyped:
@@ -462,7 +476,9 @@ class MySqliteRequest
         end
 
         add_request_queue("UPDATE")
+        p "request_queue #{@request_queue}"
         @table_data = get_table_data(table_name)
+        # @table_data = get_table_data(table_name + ".csv")
         puts "Updating table..."
         self
         # puts "upend\n"
@@ -476,6 +492,7 @@ class MySqliteRequest
         end
         add_request_queue("SET")
         @update_data = data
+        p "request_queue #{@request_queue}"
         puts "setting data..."
         self
     end
@@ -500,8 +517,19 @@ class MySqliteRequest
         #   check if request is empty
         return "request queue - empty" if check_for_error()
         #   execute request(s)
-        run_from()
-        @queue_result = @request_queue.map {
+        # run_from()
+        # @queue_result = @request_queue.map {
+        #     #   iterate through the queue and execute each request
+        #     case type
+        #     when "SELECT"
+        #       run_select()
+        #     when "UPDATE"
+        #       run_update()
+        #     when "DELETE"
+        #       run_delete()
+        #     end
+        # }
+        @queue_result = @request_queue.map do |type|
             #   iterate through the queue and execute each request
             case type
             when "SELECT"
@@ -511,74 +539,40 @@ class MySqliteRequest
             when "DELETE"
               run_delete()
             end
-        }
+        end
         # print out 
         p @queue_result
     end
-    
-    # def run_update()
-    #     table_name = @from_table[:name]
-    #     headers = @table_data.first.headers
-
-    #     updated_rows = []
-
-    #     @table_data.each do |row|
-    #         if @where_result.nil? || row[@where_result[:column]] == @where_result[:value]
-    #           @update_data.each do |col, val|
-    #             row[col] = val
-    #           end
-    #         end
-    #         updated_rows << row
-    #     end
-
-    #     CSV.open(table_name, "w", write_headers: true, headers: headers) do |csv|
-    #         updated_rows.each do |row|
-    #             csv << row
-    #         end
-    #     end
-    # end
 
     def run_from()
         from_clause = @my_sqlite_request.find { |req| req.start_with?("FROM") }
         return unless from_clause
       
-        @table_data = get_table_data(table_name)
-        # table_name = @table_data[:name]
+        @table_data = get_table_data(table_name + ".csv")
     end      
 
     def run_update()
-        table_name = @table_data[:name]
-        rows = @table_data[:data]
-        # headers = @table_data[:headers]
-        headers = get_table_headers()
-
-        updated_rows = []
-
-        puts "Where condition: #{@where_result}"
-        if @where_result.nil?
-            puts "Error: No where condition provided."
-            return -1
-        end
-
-        rows.each do |row|
-            if row[@where_result[:column]] == @where_result[:value]
+        return unless @table_data && @update_data
+    
+        headers = get_table_headers
+        updated = false
+    
+        @table_data[:data].each do |row|
+            if @where_result && row[headers.index(@where_result[:column])] == @where_result[:value]
                 @update_data.each do |col, val|
-                    if row.has_key?(col)
-                        row[col] = val
-                    else
-                        puts "Warning: Column #{col} does not exist in row."
-                    end
+                    col_index = headers.index(col)
+                    row[col_index] = val if col_index
                 end
+                updated = true
             end
-            updated_rows << row
         end
-
-        puts "Updated rows:"
-        updated_rows.each { |row| puts row.inspect }
-
-        @table_data[:data] = updated_rows
-        save_table
-
+    
+        if updated
+            save_table()
+            puts "Update successful"
+        else
+            puts "No rows matched the WHERE condition"
+        end
     end
 
     def run_set()
@@ -598,13 +592,12 @@ class MySqliteRequest
         puts "Set new info in table and saving result"
       end      
 
-      def save_table()
-        table_name = @table_data[:name]
-        headers = @table_data[:headers]
-        rows = @table_data[:data]
-            
-        CSV.open(table_name, "w", write_headers: true, headers: headers) do |csv|
-            rows.each do |row|
+    def save_table()
+        return unless @table_data
+        
+        CSV.open(@table_data[:name], "w") do |csv|
+            csv << get_table_headers
+            @table_data[:data].each do |row|
                 csv << row
             end
         end
