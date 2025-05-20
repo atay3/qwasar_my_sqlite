@@ -1,0 +1,8 @@
+#	alias	
+#       custom	
+alias gs='git status'	
+alias gcm='git commit -m'	
+alias gco='git checkout'	
+alias gxs='gs | grep -q'	
+
+#TODO add later, not working with sudo for some reason
