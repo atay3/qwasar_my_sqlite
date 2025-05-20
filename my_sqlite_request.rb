@@ -224,17 +224,20 @@ class MySqliteRequest
     def select(column_name)
         return false if check_for_error
         parsed_columns = nil
-        # puts "col name is #{column_name}"
         case
+        #TODO add feature for * aka all columns
+        # multiple columns
         when column_name.class == Array
             puts "select - type array"
-            parsed_columns = column_name if column_name.all? {|x| check_columns(x)}
+            parsed_columns = column_name if column_name.all? {|x| check_columns(x, @get_table_headers)}
+        # single column
         when (column_name.is_a? String)
             puts "select - type string"
             # TODO "add check if string is * aka wildcard?"
-            parsed_columns = [column_name] if check_columns(column_name)
+            parsed_columns = [column_name] if check_columns(column_name, @get_table_headers)
         else
             puts "select - invalid [#{column_name.class}]"
+            parsed_columns = nil
         end
         return false if parsed_columns == nil
         @selected_columns = parsed_columns.map {|x| get_table_headers.find_index(x)}
