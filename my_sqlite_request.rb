@@ -562,23 +562,6 @@ class MySqliteRequest
         # end
     end
 
-    # def run_set()
-    #     if @where_result.nil?
-    #         puts "Error: No where condition provided."
-    #         return -1
-    #     end
-    #     @table_data[:data].each do |row|
-    #       if row[@where_result[:column]] == @where_result[:value]
-    #         @update_data.each do |col, val|
-    #             row[col] = val
-    #         end
-    #       end
-    #     end
-      
-    #     save_table
-    #     puts "Set new info in table and saving result"
-    # end      
-
     # Helper function used to save table_data after set and update operations
     def save_table()
         return unless @table_data
