@@ -499,7 +499,7 @@ class MySqliteRequest
 
 #   10
 # Delete Implement a delete method. It set the request to delete on all matching row. It will continue to build the request. An delete request might be associated with a where request.
-    def delete
+    def delete()
         if check_sqlite_statement("DELETE") == -8
             return -8
         end
@@ -523,14 +523,19 @@ class MySqliteRequest
             case operation
             when "SELECT" then run_select()
             when "UPDATE" then run_update()
+            when "SET" then next
             when "DELETE" then run_delete()
             when "WHERE" then next
             else
                 add_error("Unknown operation: #{operation}")
             end
         end
+
         # print out 
         p @queue_result
+
+        # Return results or errors
+        @request_errors.empty? ? @request_result : @request_errors
     end  
 
     def run_update()
@@ -549,31 +554,32 @@ class MySqliteRequest
             end
         end
     
-        if updated
-            save_table()
-            puts "Update successful"
-        else
-            puts "No rows matched the WHERE condition"
-        end
+        # if updated
+        #     save_table()
+        #     puts "Update successful"
+        # else
+        #     puts "No rows matched the WHERE condition"
+        # end
     end
 
-    def run_set()
-        if @where_result.nil?
-            puts "Error: No where condition provided."
-            return -1
-        end
-        @table_data[:data].each do |row|
-          if row[@where_result[:column]] == @where_result[:value]
-            @update_data.each do |col, val|
-                row[col] = val
-            end
-          end
-        end
+    # def run_set()
+    #     if @where_result.nil?
+    #         puts "Error: No where condition provided."
+    #         return -1
+    #     end
+    #     @table_data[:data].each do |row|
+    #       if row[@where_result[:column]] == @where_result[:value]
+    #         @update_data.each do |col, val|
+    #             row[col] = val
+    #         end
+    #       end
+    #     end
       
-        save_table
-        puts "Set new info in table and saving result"
-      end      
+    #     save_table
+    #     puts "Set new info in table and saving result"
+    # end      
 
+    # Helper function used to save table_data after set and update operations
     def save_table()
         return unless @table_data
         
@@ -586,5 +592,43 @@ class MySqliteRequest
     end
       
     def run_delete()
+        unless @table_data
+            add_error("No table specified for DELETE")
+            return -1
+        end
+
+        headers = get_table_headers
+        original_count = @table_data[:data].size
+        new_data = []
+
+        # Delete rows matching Where condition
+        if @where_result
+            column_index = headers.index(@where_result[:column])
+            unless column_index
+                add_error("Column not found: #{@where_result[:column]}")
+                return -1
+            end
+
+            @table_data[:data].each do |row|
+                # Store data that doesn't match into new array
+                unless row[column_index] == @where_result[:value]
+                    new_data << row
+                end
+            end
+        else
+            new_data = [headers] # Delete all but headers
+        end
+
+        # For debugging
+        deleted_count = original_count - new_data.size
+        @table_data[:data] = new_data
+
+        if save_table()
+            puts "DELETE successful - removed #{deleted_count} rows"
+            deleted_count
+        else
+            add_error("DELETE failed - could not save table")
+            -1
+        end
     end
 end
