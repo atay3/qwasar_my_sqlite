@@ -478,7 +478,6 @@ class MySqliteRequest
         add_request_queue("UPDATE")
         p "request_queue #{@request_queue}"
         @table_data = get_table_data(table_name)
-        # @table_data = get_table_data(table_name + ".csv")
         puts "Updating table..."
         self
         # puts "upend\n"
@@ -521,11 +520,16 @@ class MySqliteRequest
         @queue_result = @request_queue.map do |operation|
             #   iterate through the queue and execute each request
             case operation
-            when "SELECT" then run_select()
+            when "SELECT" then next
             when "UPDATE" then run_update()
             when "SET" then next
             when "DELETE" then run_delete()
             when "WHERE" then next
+            when "FROM" then next
+            when "JOIN" then next
+            when "ORDER" then next
+            when "INSET" then next
+            when "VALUES" then next
             else
                 add_error("Unknown operation: #{operation}")
             end
