@@ -531,7 +531,7 @@ class MySqliteRequest
             when "FROM" then next
             when "JOIN" then next
             when "ORDER" then next
-            when "INSET" then next
+            when "INSERT" then next
             when "VALUES" then next
             else
                 add_error("Unknown operation: #{operation}")
