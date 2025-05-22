@@ -521,9 +521,12 @@ class MySqliteRequest
             #   iterate through the queue and execute each request
             case operation
             when "SELECT" then next
-            when "UPDATE" then run_update()
+            when "UPDATE" 
+                next unless @update_data
+                run_update()
             when "SET" then next
-            when "DELETE" then run_delete()
+            when "DELETE" 
+                run_delete()
             when "WHERE" then next
             when "FROM" then next
             when "JOIN" then next
@@ -558,12 +561,12 @@ class MySqliteRequest
             end
         end
     
-        # if updated
-        #     save_table()
-        #     puts "Update successful"
-        # else
-        #     puts "No rows matched the WHERE condition"
-        # end
+        if updated
+            save_table()
+            puts "Update successful"
+        else
+            puts "No rows matched the WHERE condition"
+        end
     end
 
     # Helper function used to save table_data after set and update operations
@@ -573,7 +576,9 @@ class MySqliteRequest
         CSV.open(@table_data[:name], "w") do |csv|
             csv << get_table_headers
             @table_data[:data].each do |row|
-                csv << row
+                if row != @table_data[:headers]
+                    csv << row
+                end
             end
         end
     end
