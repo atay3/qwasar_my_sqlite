@@ -177,13 +177,17 @@ class MySqliteRequest
     #   TODO check for specific .csv files?
     #       nba_players.csv nba_player_data.csv
 
-    def get_table_data(table_name)
+    def set_table_data(table_name)
         table_hash = {
             name: table_name,
             data: read_csv_file(table_name),
         }
         table_hash[:headers] = table_hash[:data][0]
         return table_hash
+    end
+
+    def get_table_data
+        @table_data
     end
 
     #   for checking csv
@@ -200,7 +204,7 @@ class MySqliteRequest
             #   update ongoing request
             add_request_queue("FROM")
             #   read and save csv contents
-            @table_data = get_table_data(table_name)
+            @table_data = set_table_data(table_name)
             return self
         end
         return self
@@ -224,11 +228,11 @@ class MySqliteRequest
         case
         when column_name.class == Array
             puts "select - type array"
-            parsed_columns = column_name if column_name.all? {|x| check_columns(x)}
+            parsed_columns = column_name if column_name.all? {|x| check_columns(x, get_table_headers)}
         when (column_name.is_a? String)
             puts "select - type string"
             # TODO "add check if string is * aka wildcard?"
-            parsed_columns = [column_name] if check_columns(column_name)
+            parsed_columns = [column_name] if check_columns(column_name, get_table_headers)
         else
             puts "select - invalid [#{column_name.class}]"
         end
