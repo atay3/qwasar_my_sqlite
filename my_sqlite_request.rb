@@ -224,36 +224,23 @@ class MySqliteRequest
     def select(column_name)
         return false if check_for_error
         parsed_columns = nil
-        puts "col name - #{column_name}"
         case
         #   multiple columns
         when column_name.class == Array
-            puts "select - type array"
-            # parsed_columns = column_name.map if column_name.all? {|x| check_columns(x, get_table_headers)}
             indices = column_name.map {|column| get_table_headers.find_index(column)}
             parsed_columns = indices unless indices.include?(nil)
         #   single column
         when (column_name.is_a? String)
-            # puts "select - type string"
-            #   * aka wildcard?"
+            #   * aka wildcard"
             if column_name == "*" then parsed_columns = get_table_headers
-                # puts "456"
             else    #   look for column names
                 parsed_columns = get_table_headers.find_index(column_name)
-                #   old, refactored to simpler above
-                # index = get_table_headers.find_index(column_name)
-                # # puts "index #{index}"
-                # !index.nil? ? parsed_columns = [index] : nil
             end
         end
         if parsed_columns.nil?
             add_error("select - invalid [#{column_name.class}]")
         end
-        puts "parsed columns - #{parsed_columns}"
-        # if !parsed_columns.nil?
         @selected_columns = parsed_columns unless parsed_columns.nil?
-        # @selected_columns = parsed_columns.map {|x| get_table_headers.find_index(x)}
-        puts "selected cols #{@selected_columns}"
         self
     end
 #   3
