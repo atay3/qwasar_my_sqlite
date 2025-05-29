@@ -484,7 +484,8 @@ class MySqliteRequest
 
         add_request_queue("UPDATE")
         p "request_queue #{@request_queue}"
-        @table_data = get_table_data(table_name)
+        # @table_data = get_table_data(table_name)
+        @table_data = set_table_data(table_name)
         puts "Updating table..."
         self
         # puts "upend\n"
@@ -618,7 +619,6 @@ class MySqliteRequest
             new_data = [headers] # Delete all but headers
         end
 
-        # For debugging
         deleted_count = original_count - new_data.size
         @table_data[:data] = new_data
 
