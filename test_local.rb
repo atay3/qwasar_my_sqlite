@@ -41,12 +41,23 @@ p_headers(headers)
 p_table_data(table_data)
 p_errors(request.get_request_errors)
 p_queue(request.get_request_queue)
-request = request.select('ages')
+request = request.select("")
 # p_q_result(result.queue_result)
 # request.run
 
 #CHECKED
 #   -from()
+#   -select() - fully tested
+#       -string - 1 column name
+#           -empty - PASS   i.e. [""] in ["a", "b"]
+#           -exists - PASS  i.e. ["a"] in ["a", "b"]
+#           -does not exist - PASS i.e. ["c"] in ["a", "b"]
+#           -"*" all edgecase - PASS
+#       -array
+#           -empty - PASS i.e. [] in [a,b,c]
+#           -every in array in header - PASS i.e. [a,b,c] in [a,b,c,d]
+#           -some of array in header - PASS i.e. [a,b,e] in [a,b,c,d]
 
 #TODO
 #   create run_from()
+#   check if select() - array - values need to be parsed or not
