@@ -237,10 +237,12 @@ class MySqliteRequest
                 parsed_columns = get_table_headers.find_index(column_name)
             end
         end
-        if parsed_columns.nil?
+        if parsed_columns
+            @selected_columns = parsed_columns
+            add_request_queue("SELECT")
+        else
             add_error("select - invalid [#{column_name.class}]")
         end
-        @selected_columns = parsed_columns unless parsed_columns.nil?
         self
     end
 #   3
@@ -631,6 +633,23 @@ class MySqliteRequest
     end
 
     def run_from()
-        
+        #   check if select() exists in queue
+        #   if exists
+        #
+        #   if no exist
+        #       add err
+    end
+
+    def run_select()
+        #   check if from() exists in queue
+        #   if exists
+        #       traverse row, then col
+        #           add data[row][col] to result
+        #       set result
+        #   check if selected_columns is not nil
+        if @selected_columns
+            result = @table_data[:data][1..-1].map {|row| row.values_at(*@selected_columns)}
+        end
+        p result.inspect
     end
 end
