@@ -41,7 +41,9 @@ p_headers(headers)
 p_table_data(table_data)
 p_errors(request.get_request_errors)
 p_queue(request.get_request_queue)
-request = request.select("")
+request = request.select(["id", "name"])
+p_queue(request.get_request_queue)
+request.run_select
 # p_q_result(result.queue_result)
 # request.run
 
