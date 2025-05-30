@@ -2,13 +2,9 @@ require_relative 'my_sqlite_request'
 require 'readline'
 
 class MySqliteCli
-    def run_prompt()
-        puts "MySQLite version 0.1 20XX-XX-XX"
-
-        while input = Readline.readline("my_sqlite_cli> ", true)
-            process_input(input)
-        end
-    end
+    def initialize
+        @request = MySqliteRequest.new
+      end
 
     def process_input(input)
         case input.strip.downcase
@@ -22,7 +18,7 @@ class MySqliteCli
     end
 
     def execute_query(query)
-        request = MySqliteRequest.new
+        # @request = MySqliteRequest.new
         # Parse and execute the query
         case query
         when /^SELECT/ then handle_select(query)
@@ -43,14 +39,59 @@ class MySqliteCli
     def handle_select(query)
         # Handle wildcard
         # Handle reqests for specific columns
-        
-        if query.match(/SELECT (.+?) FROM (\w+)(?: WHERE (.+))?/i)
-            table = $2
+        return if @request.nil?
+
+        if match = query.match(/SELECT\s+(.+?)\s+FROM\s+(\w+)(?:\s+WHERE\s+(.+))?/i)
+            # Parse query
+            cols = match[1].strip
+            table = match[2]
+            where_clause = match[3]
+
+            p cols
             p table
-            p $1
-            request = MySqliteRequest.new
-            request.from(table).select($1)
-            results = request.run
+            p where_clause
+      
+            @request.from(table)
+            handle_select_columns(cols)
+            handle_where(where_clause) if where_clause
+      
+            display_results(@request.run)
+        else
+            puts "Error: Invalid syntax."
+        end
+    end
+
+    def handle_select_columns(cols)
+        if columns == '*'
+            @request.select('*')
+        else
+            columns.split(',').each do |col|
+                @request.select(col.strip)
+            end
+        end
+    end
+
+    def handle_where(where_clause)
+    end    
+
+    def display_results(results)
+        if results.empty?
+            puts "No results found"
+        else
+            columns = results.first.keys
+            puts columns.join(" | ")
+            puts "-" * columns.sum(&:length) + "-" * (columns.size * 3)
+            results.each do |row|
+                puts columns.map { |col| row[col].to_s }.join(" | ")
+            end
+        end
+    end
+
+    def run_prompt()
+        puts "MySQLite version 0.1 20XX-XX-XX"
+
+        while input = Readline.readline("my_sqlite_cli> ", true)
+            process_input(input)
         end
     end
 
