@@ -108,7 +108,7 @@ class MySqliteRequest
     end
 
     def get_table_headers
-        @table_data[:headers]
+        @table_data[:headers] if @table_data
     end
 
     def read_csv_file(file_name)
@@ -222,7 +222,7 @@ class MySqliteRequest
 # OR
 # def select([column_name_a, column_name_b])
     def select(column_name)
-        return false if check_for_error
+        return false if check_for_error | !@table_data
         parsed_columns = nil
         case
         #   multiple columns
@@ -635,7 +635,7 @@ class MySqliteRequest
     def run_from()
         #   check if select() exists in queue
         #   if exists
-        #
+        add_error("missing FROM") if !@table_data
         #   if no exist
         #       add err
     end
@@ -647,9 +647,11 @@ class MySqliteRequest
         #           add data[row][col] to result
         #       set result
         #   check if selected_columns is not nil
-        if @selected_columns
+        if @selected_columns && @table_data
             result = @table_data[:data][1..-1].map {|row| row.values_at(*@selected_columns)}
         end
-        p result.inspect
+        result.each {|x| p x}
+        #   print results correct?
+        #   might need to fix later
     end
 end

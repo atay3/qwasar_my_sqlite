@@ -9,24 +9,39 @@ request = MySqliteRequest.new
 #❌
 #✅
 
+table_all = nil
+table_data = nil
+headers = nil
 #   test from()
-request = request.from("student.csv")
-# request = request.select("id")
-table_all = request.get_table_data
-headers = table_all[:headers]
-table_data = table_all[:data][1..-1]
+# request = request.from("student.csv")
+# # request = request.select("id")
+# table_all = request.get_table_data
+# headers = table_all[:headers]
+# table_data = table_all[:data][1..-1]
 
 def p_headers(headers)
-    puts "headers\n#{headers}\n"
+    if headers
+        puts "headers\n#{headers}\n"
+    else
+        puts "empty headers\n"
+    end
 end
 
 def p_table_data(table_data)
-    puts "table"
-    table_data.each {|x| puts x.inspect}
+    if table_data
+        puts "table"
+        table_data.each {|x| puts x.inspect}
+    else
+        puts "empty table"
+    end
 end
 
 def p_errors(errors)
-    puts "errors - #{errors}"
+    if errors
+        puts "errors - #{errors}"
+    else
+        puts "empty errs"
+    end
 end
 
 def p_queue(queue)
@@ -37,13 +52,17 @@ def p_q_result(result)
     puts "result - #{result}"
 end
 
+request = request.select(["id", "name"])
 p_headers(headers)
 p_table_data(table_data)
-p_errors(request.get_request_errors)
-p_queue(request.get_request_queue)
-request = request.select(["id", "name"])
-p_queue(request.get_request_queue)
-request.run_select
+if request
+    p_errors(request.get_request_errors)
+    p_queue(request.get_request_queue)
+    p_queue(request.get_request_queue)
+    request.run_select
+else
+    puts "empty request"
+end
 # p_q_result(result.queue_result)
 # request.run
 
