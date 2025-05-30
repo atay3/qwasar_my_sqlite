@@ -62,10 +62,10 @@ class MySqliteCli
     end
 
     def handle_select_columns(cols)
-        if columns == '*'
+        if cols == '*'
             @request.select('*')
         else
-            columns.split(',').each do |col|
+            cols.split(',').each do |col|
                 @request.select(col.strip)
             end
         end
@@ -75,15 +75,22 @@ class MySqliteCli
     end    
 
     def display_results(results)
-        if results.empty?
-            puts "No results found"
-        else
-            columns = results.first.keys
-            puts columns.join(" | ")
-            puts "-" * columns.sum(&:length) + "-" * (columns.size * 3)
-            results.each do |row|
-                puts columns.map { |col| row[col].to_s }.join(" | ")
+        case results
+        when String
+            puts results  # Just print the message directly
+        when Array
+            if results.empty?
+                puts "No results found"
+            else
+                cols = results.first.keys
+                puts cols.join(" | ")
+                puts "-" * cols.sum(&:length) + "-" * (cols.size * 3)
+                results.each do |row|
+                    puts cols.map { |col| row[col].to_s }.join(" | ")
+                end
             end
+        when nil
+            puts "No results found"
         end
     end
 
