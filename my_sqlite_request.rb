@@ -248,7 +248,7 @@ class MySqliteRequest
                 parsed_columns = get_table_headers.find_index(column_name)
             end
         end
-        puts "parsed cols = [#{parsed_columns}]"
+        puts "parsed cols = #{parsed_columns}"
         if !parsed_columns.nil?
             puts "selected cols - #{column_name}"
             @selected_columns = parsed_columns
@@ -536,10 +536,11 @@ class MySqliteRequest
 
     def execute_requests()
         #   check if request is empty
-        return "request queue - empty" if check_for_error()
-
+        return "request queue - empty" if check_for_error
         #   execute request(s)
+        puts "get_r_q #{get_request_queue}"
         @queue_result = @request_queue.map do |operation|
+            # p operation
             #   iterate through the queue and execute each request
             case operation
             when "SELECT"
@@ -553,6 +554,8 @@ class MySqliteRequest
             when "WHERE" then next
             when "FROM"
                 run_from()
+                puts @queue_result
+                next
             when "JOIN" then next
             when "ORDER" then next
             when "INSERT" then next
@@ -566,7 +569,9 @@ class MySqliteRequest
         # Return results or errors
         # @request_errors.empty? ? @request_result : @request_errors
         #   refactored your previous line - warren
-        check_for_error ? get_request_result : get_request_errors
+        # check_for_error ? get_request_result : get_request_errors
+        check_for_error ? (puts "122" ): (puts "111")
+        puts "123"
     end  
 
     def run_update()
@@ -650,7 +655,9 @@ class MySqliteRequest
     def run_from()
         #   check if select() exists in queue
         #   if exists
+        #       do nothing
         add_error("missing FROM") if !@table_data
+        @table_data[:data]
         #   if no exist
         #       add err
     end
@@ -664,15 +671,20 @@ class MySqliteRequest
         #       set result
         #   check if selected_columns is not nil
         if @selected_columns && @table_data
-            request_result = @table_data[:data].map {|row| row.values_at(*@selected_columns)}
+            request_result = @table_data[:data].map do 
+                |row| row.values_at(*@selected_columns)
+                # p row
+            end
             #   print results correct?
             #   might need to fix later
-            request_result.each {|x| p x}
+            # request_result.each {|x| p x}
         else
             #   from fails
             add_error("missing SELECT") if !@table_data
             #   select fails   
             add_error("missing SELECT") if !@selected_columns
+            return
         end
+        return request_result
     end
 end

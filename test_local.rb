@@ -49,15 +49,15 @@ def p_table_data(table_data)
 end
 
 def p_errors(errors)
-    if errors
-        puts "errors - #{errors}"
-    else
+    if errors.empty?
         puts "empty errs"
+    else
+        puts "errors - #{errors}"
     end
 end
 
 def p_r_queue(queue)
-    puts "result queue - #{queue}"
+    puts "request queue - #{queue}"
 end
 
 def p_r_result(result)
@@ -69,7 +69,7 @@ def p_r_result(result)
 end
 
 #   test part2
-request = request.select(["id", "age"])
+request = request.select(["id"])
 p_headers(headers)
 p_table_data(table_data)
 if request
@@ -77,9 +77,11 @@ if request
 else
     puts "empty request"
 end
-p_r_queue(request.get_request_queue)
-p_r_result(request.get_request_result)
+# p_r_queue(request.get_request_queue)
+# p_r_result(request.get_request_result)
 request.run
+# p request.get_table_data
+# p request.get_request_errors
 
 #CHECKED
 #   -from()
