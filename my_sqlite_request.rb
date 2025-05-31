@@ -659,8 +659,10 @@ class MySqliteRequest
             #   might need to fix later
             result.each {|x| p x}
         else
-            #   select fails
-            add_error("missing SELECT")
+            #   from fails
+            add_error("missing SELECT") if !@table_data
+            #   select fails   
+            add_error("missing SELECT") if !@selected_columns
         end
     end
 end
