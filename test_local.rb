@@ -9,12 +9,13 @@ request = MySqliteRequest.new
 #❌
 #✅
 
+#   test setup
 table_all = nil
 table_data = nil
 headers = nil
 #   test from()
-# request = request.from("student.csv")
-# # request = request.select("id")
+request = request.from("student.csv")
+# request = request.select("id")
 # table_all = request.get_table_data
 # headers = table_all[:headers]
 # table_data = table_all[:data][1..-1]
@@ -45,26 +46,29 @@ def p_errors(errors)
 end
 
 def p_queue(queue)
-    puts "queue - #{queue}"
+    puts "result queue - #{queue}"
 end
 
 def p_q_result(result)
-    puts "result - #{result}"
+    if result
+        puts "full request result\n#{result}"
+    else
+        puts "request sult is EMTPY"
+    end
 end
 
-request = request.select(["id", "name"])
+#   test part2
+request = request.select(["i"])
 p_headers(headers)
 p_table_data(table_data)
 if request
     p_errors(request.get_request_errors)
-    p_queue(request.get_request_queue)
-    p_queue(request.get_request_queue)
-    request.run_select
 else
     puts "empty request"
 end
-# p_q_result(result.queue_result)
-# request.run
+p_queue(request.get_request_queue)
+p_q_result(request.get_request_result)
+request.run
 
 #CHECKED
 #   -from()
