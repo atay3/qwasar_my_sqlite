@@ -1,4 +1,5 @@
 require_relative "my_sqlite_request"
+require 'pp'
 
 request = MySqliteRequest.new
 #  ✅test run() - check for empty
@@ -10,15 +11,24 @@ request = MySqliteRequest.new
 #✅
 
 #   test setup
-table_all = nil
+# table_all = nil
 table_data = nil
 headers = nil
 #   test from()
 request = request.from("student.csv")
 # request = request.select("id")
 # table_all = request.get_table_data
-# headers = table_all[:headers]
-# table_data = table_all[:data][1..-1]
+headers = request.get_table_headers
+table_data = request.get_table_data
+
+def p_table_info(table_info)
+    if table_info
+        puts "table\n"
+        table_info.each {|row| pp row}
+    else
+        puts "empty table info"
+    end
+end
 
 def p_headers(headers)
     if headers
@@ -30,8 +40,9 @@ end
 
 def p_table_data(table_data)
     if table_data
-        puts "table"
-        table_data.each {|x| puts x.inspect}
+        puts "table data"
+        # table_data.each {|x| puts x.inspect}
+        table_data[:data].each {|row| pp row}
     else
         puts "empty table"
     end
@@ -45,11 +56,11 @@ def p_errors(errors)
     end
 end
 
-def p_queue(queue)
+def p_r_queue(queue)
     puts "result queue - #{queue}"
 end
 
-def p_q_result(result)
+def p_r_result(result)
     if result
         puts "full request result\n#{result}"
     else
@@ -58,7 +69,7 @@ def p_q_result(result)
 end
 
 #   test part2
-request = request.select(["i"])
+request = request.select(["id", "age"])
 p_headers(headers)
 p_table_data(table_data)
 if request
@@ -66,8 +77,8 @@ if request
 else
     puts "empty request"
 end
-p_queue(request.get_request_queue)
-p_q_result(request.get_request_result)
+p_r_queue(request.get_request_queue)
+p_r_result(request.get_request_result)
 request.run
 
 #CHECKED

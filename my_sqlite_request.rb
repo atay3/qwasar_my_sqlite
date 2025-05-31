@@ -182,14 +182,21 @@ class MySqliteRequest
     #       nba_players.csv nba_player_data.csv
 
     def set_table_data(table_name)
+        data_from_csv = read_csv_file(table_name) 
         table_hash = {
             name: table_name,
-            data: read_csv_file(table_name),
+            headers: data_from_csv[0],
+            data: data_from_csv[1..-1],
         }
-        table_hash[:headers] = table_hash[:data][0]
         return table_hash
     end
 
+    #   returns all info of table
+    def get_table_info
+        @table_data
+    end
+
+    #   returns only data of table
     def get_table_data
         @table_data
     end
@@ -243,6 +250,7 @@ class MySqliteRequest
         end
         puts "parsed cols = [#{parsed_columns}]"
         if !parsed_columns.nil?
+            puts "selected cols - #{column_name}"
             @selected_columns = parsed_columns
             add_request_queue("SELECT")
         else
@@ -397,7 +405,7 @@ class MySqliteRequest
         #   check column name if exists
         if @table_data
             current_table = @table_data
-            table_headers = @table_data[0]
+            table_headers = @table_data[:headers]
         elsif @from_table
             current_table = @from_table
             table_headers = @from_table[:headers]
@@ -534,7 +542,8 @@ class MySqliteRequest
         @queue_result = @request_queue.map do |operation|
             #   iterate through the queue and execute each request
             case operation
-            when "SELECT" then next
+            when "SELECT"
+                run_select()
             when "UPDATE" 
                 next unless @update_data
                 run_update()
@@ -542,7 +551,8 @@ class MySqliteRequest
             when "DELETE" 
                 run_delete()
             when "WHERE" then next
-            when "FROM" then next
+            when "FROM"
+                run_from()
             when "JOIN" then next
             when "ORDER" then next
             when "INSERT" then next
@@ -551,12 +561,12 @@ class MySqliteRequest
                 add_error("Unknown operation: #{operation}")
             end
         end
-
         # print out 
-        p @queue_result
-
+        puts "q result\n[#{@queue_result}]\n"
         # Return results or errors
-        @request_errors.empty? ? @request_result : @request_errors
+        # @request_errors.empty? ? @request_result : @request_errors
+        #   refactored your previous line - warren
+        check_for_error ? get_request_result : get_request_errors
     end  
 
     def run_update()
@@ -654,10 +664,10 @@ class MySqliteRequest
         #       set result
         #   check if selected_columns is not nil
         if @selected_columns && @table_data
-            result = @table_data[:data][1..-1].map {|row| row.values_at(*@selected_columns)}
+            request_result = @table_data[:data].map {|row| row.values_at(*@selected_columns)}
             #   print results correct?
             #   might need to fix later
-            result.each {|x| p x}
+            request_result.each {|x| p x}
         else
             #   from fails
             add_error("missing SELECT") if !@table_data
