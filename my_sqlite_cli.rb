@@ -47,9 +47,9 @@ class MySqliteCli
             table = match[2]
             where_clause = match[3]
 
-            p cols
-            p table
-            p where_clause
+            # p cols
+            # p table
+            # p where_clause
       
             @request.from(table)
             handle_select_columns(cols)
@@ -72,7 +72,13 @@ class MySqliteCli
     end
 
     def handle_where(where_clause)
-        
+        if match = condition.match(/(\w+)\s*=\s*(?:'([^']+)'|"([^"]+)"|(\S+))/)
+            column = match[1]
+            value = match[2] || match[3] || match[4]
+            @request.where(column, value)
+        else
+            puts "Error: Invalid format."
+        end
     end    
 
     def display_results(results)
