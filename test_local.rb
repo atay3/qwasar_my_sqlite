@@ -1,4 +1,5 @@
 require_relative "my_sqlite_request"
+require 'pp'
 
 request = MySqliteRequest.new
 #  ✅test run() - check for empty
@@ -9,43 +10,76 @@ request = MySqliteRequest.new
 #❌
 #✅
 
+#   test setup
+# table_all = nil
+table_data = nil
+headers = nil
 #   test from()
 request = request.from("student.csv")
 # request = request.select("id")
-table_all = request.get_table_data
-headers = table_all[:headers]
-table_data = table_all[:data][1..-1]
+# table_all = request.get_table_data
+headers = request.get_table_headers
+table_data = request.get_table_data
+
+def p_table_info(table_info)
+    if table_info
+        puts "table\n"
+        table_info.each {|row| pp row}
+    else
+        puts "empty table info"
+    end
+end
 
 def p_headers(headers)
-    puts "headers\n#{headers}\n"
+    if headers
+        puts "headers\n#{headers}\n"
+    else
+        puts "empty headers\n"
+    end
 end
 
 def p_table_data(table_data)
-    puts "table"
-    table_data.each {|x| puts x.inspect}
+    if table_data
+        puts "table data"
+        # table_data.each {|x| puts x.inspect}
+        table_data[:data].each {|row| pp row}
+    else
+        puts "empty table"
+    end
 end
 
 def p_errors(errors)
-    puts "errors - #{errors}"
+    if errors
+        puts "errors - #{errors}"
+    else
+        puts "empty errs"
+    end
 end
 
-def p_queue(queue)
-    puts "queue - #{queue}"
+def p_r_queue(queue)
+    puts "result queue - #{queue}"
 end
 
-def p_q_result(result)
-    puts "result - #{result}"
+def p_r_result(result)
+    if result
+        puts "full request result\n#{result}"
+    else
+        puts "request sult is EMTPY"
+    end
 end
 
+#   test part2
+request = request.select(["id", "age"])
 p_headers(headers)
 p_table_data(table_data)
-p_errors(request.get_request_errors)
-p_queue(request.get_request_queue)
-request = request.select(["id", "name"])
-p_queue(request.get_request_queue)
-request.run_select
-# p_q_result(result.queue_result)
-# request.run
+if request
+    p_errors(request.get_request_errors)
+else
+    puts "empty request"
+end
+p_r_queue(request.get_request_queue)
+p_r_result(request.get_request_result)
+request.run
 
 #CHECKED
 #   -from()
