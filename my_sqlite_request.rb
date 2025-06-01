@@ -538,9 +538,7 @@ class MySqliteRequest
         #   check if request is empty
         return "request queue - empty" if check_for_error
         #   execute request(s)
-        puts "get_r_q #{get_request_queue}"
-        @queue_result = @request_queue.map do |operation|
-            # p operation
+        @request_queue.map do |operation|
             #   iterate through the queue and execute each request
             case operation
             when "SELECT"
