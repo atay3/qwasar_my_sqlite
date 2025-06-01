@@ -72,12 +72,13 @@ class MySqliteCli
     end
 
     def handle_where(where_clause)
+        
     end    
 
     def display_results(results)
         case results
         when String
-            puts results  # Just print the message directly
+            puts results  # Print the message
         when Array
             if results.empty?
                 puts "No results found"
@@ -96,7 +97,6 @@ class MySqliteCli
 
     def run_prompt()
         puts "MySQLite version 0.1 20XX-XX-XX"
-
         while input = Readline.readline("my_sqlite_cli> ", true)
             process_input(input)
         end
