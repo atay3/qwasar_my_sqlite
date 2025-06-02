@@ -486,7 +486,9 @@ class MySqliteRequest
 #   8
 # Update Implement a method to update which will receive a table name (filename). It will continue to build the request. An update request might be associated with a where request.
     def update(table_name)
-        puts -5
+        # puts -5
+        table_name += ".csv" unless table_name.end_with?(".csv")
+        
         if !check_filename(table_name)
             puts -1
             return -1

@@ -10,7 +10,7 @@ end
 
 # Initialize and build the update request
 request = MySqliteRequest.new
-request.update("student.csv")
+request.update("student")
        .where("name", "a")
        .set({ "id" => "7", "age" => "11" })
        .run()

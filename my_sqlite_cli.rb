@@ -22,11 +22,9 @@ class MySqliteCli
         # Parse and execute the query
         case query
         when /^SELECT/ then handle_select(query)
-        # when /^FROM/ then handle_from(query)
-        # when /^WHERE/ then handle_where(query)
         # when /^JOIN/ then handle_join(query)
         # when /^ORDER/ then handle_order(query)
-        # when /^UPDATE/ then handle_update(query)
+        when /^UPDATE/ then handle_update(query)
         # when /^SET/ then handle_set(query)
         # when /^INSERT/i then handle_insert(query)
         # when /^DELETE/i then handle_delete(query)
@@ -37,8 +35,6 @@ class MySqliteCli
     end
 
     def handle_select(query)
-        # Handle wildcard
-        # Handle reqests for specific columns
         return if @request.nil?
 
         if match = query.match(/SELECT\s+(.+?)\s+FROM\s+(\w+)(?:\s+WHERE\s+(.+))?/i)
@@ -62,6 +58,7 @@ class MySqliteCli
     end
 
     def handle_select_columns(cols)
+        # Handle wildcard and requests for specific columns
         if cols == '*'
             @request.select('*')
         else
@@ -72,14 +69,50 @@ class MySqliteCli
     end
 
     def handle_where(where_clause)
-        if match = condition.match(/(\w+)\s*=\s*(?:'([^']+)'|"([^"]+)"|(\S+))/)
+        if match = where_clause.match(/(\w+)\s*=\s*(?:'([^']+)'|"([^"]+)"|(\S+))/)
             column = match[1]
             value = match[2] || match[3] || match[4]
+            # p value
             @request.where(column, value)
         else
             puts "Error: Invalid format."
         end
-    end    
+    end
+
+    def handle_update(query)
+        return if @request.nil?
+
+        if match = query.match(/UPDATE\s+(\w+)\s+SET\s+(.+?)(?:\s+WHERE\s+(.+))?$/i)
+            # Parse query
+            table = match[1].strip
+            set_assignments = match[2]
+            where_clause = match[3]
+
+            p table
+            p set_assignments
+            p where_clause
+      
+            @request.update(table)
+            handle_set(set_assignments)
+            handle_where(where_clause) if where_clause
+      
+            display_results(@request.run)
+        else
+            puts "Error: Invalid syntax."
+        end
+    end
+
+    def handle_set(set_assignments)
+        set_assignments.split(',').each do |assignment|
+            # col, val = assignment.split('=').map(&:strip)
+            # @request.set({col => val})
+            if assignment.match(/(\w+)\s*=\s*(?:'([^']+)'|"([^"]+)"|(\S+))/)
+                col = $1
+                val = $2 || $3 || $4
+                @request.set(col => val)
+            end
+        end
+    end
 
     def display_results(results)
         case results
