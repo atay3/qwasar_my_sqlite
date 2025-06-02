@@ -103,15 +103,12 @@ class MySqliteCli
     end
 
     def handle_set(set_assignments)
+        set_data = {}
         set_assignments.split(',').each do |assignment|
-            # col, val = assignment.split('=').map(&:strip)
-            # @request.set({col => val})
-            if assignment.match(/(\w+)\s*=\s*(?:'([^']+)'|"([^"]+)"|(\S+))/)
-                col = $1
-                val = $2 || $3 || $4
-                @request.set(col => val)
-            end
+            col, val = assignment.split('=').map(&:strip)
+            set_data[col] = val.gsub(/['"]/, '')
         end
+        @request.instance_variable_set(:@update_data, set_data)
     end
 
     def display_results(results)
@@ -129,8 +126,8 @@ class MySqliteCli
                     puts cols.map { |col| row[col].to_s }.join(" | ")
                 end
             end
-        when nil
-            puts "No results found"
+        # when nil
+        #     puts "No results found"
         end
     end
 

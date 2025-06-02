@@ -34,6 +34,7 @@ class MySqliteRequest
     end
 
     def check_for_error
+        puts "DEBUG: Checking errors. Current errors: #{@request_errors.inspect}"
         !@request_errors.empty?
     end
 
@@ -511,10 +512,11 @@ class MySqliteRequest
 # Set Implement a method to update which will receive data (a hash of data on format (key => value)). It will perform the update of attributes on all matching row. An update request might be associated with a where request.
     def set(data)
         if check_sqlite_statement("SET") == -7
+            # add_error("Duplicate SET statement")
             return -7
-        end
-        add_request_queue("SET")
+        end 
         @update_data = data
+        add_request_queue("SET")
         p "request_queue #{@request_queue}"
         puts "setting data..."
         self
@@ -537,10 +539,17 @@ class MySqliteRequest
     end
 
     def execute_requests()
+        puts "DEBUG: Checking errors. Current errors: #{@request_errors.inspect}"
         #   check if request is empty
-        return "request queue - empty" if check_for_error
+        # return "request queue - empty" if check_for_error
+
+        if check_for_error
+            puts "DEBUG: Found errors: #{@request_errors.inspect}" # Add this
+            return "request queue - empty" 
+        end
+
         #   execute request(s)
-        @request_queue.map do |operation|
+        @request_queue.each do |operation|
             #   iterate through the queue and execute each request
             case operation
             when "SELECT"
