@@ -88,11 +88,14 @@ class MySqliteCli
             # p set_assignments
             # p where_clause
       
-            @request.update(table)
-            handle_set(set_assignments)
-            handle_where(where_clause) if where_clause
-      
-            @request.run()
+            if @request.update(table) < 0
+                add_error("Update failed")
+                false
+            else
+                handle_set(set_assignments)
+                handle_where(where_clause) if where_clause
+                @request.run()
+            end
         else
             puts "Error: Invalid UPDATE syntax."
         end
@@ -113,7 +116,7 @@ class MySqliteCli
         @request.instance_variable_set(:@update_data, set_data)
     end
 
-    def handle_join(query)
+    def handle_join(join_clause)
         if match = join_clause.match(/JOIN (\w+)\s+ON\s+(\w+)\.(\w+)\s*=\s*(\w+)\.(\w+)/i)
             table_b = match[1]
             table_a_col = match[3]
@@ -125,12 +128,10 @@ class MySqliteCli
               return false
             end
             
-            result = @request.join(table_a_column, table_b, table_b_column)
-            
-            if result == 0
+            if @request.join(table_a_column, table_b, table_b_column) == 0
                 true
             else
-                add_error("Join failed with code #{result}")
+                add_error("Join failed")
                 false
             end
         else
@@ -139,7 +140,27 @@ class MySqliteCli
         end
     end
 
-    def handle_order(query)
+    def handle_order(order_clause)
+        if match = order_clause.match(/ORDER BY (\w+)(?:\s+(ASC|DESC))?/i)
+            column = match[1]
+            direction = match[2] ? match[2].downcase.to_sym : :asc # Default to ASC
+            
+            # Validate direction
+            unless [:asc, :desc].include?(direction)
+                add_error("Invalid ORDER BY direction")
+                return false
+            end
+            
+            if @request.order(order_direction, column) == 0
+                true
+            else
+                add_error("Order failed")
+                false
+            end
+        else
+            add_error("Invalid ORDER BY syntax. Use: ORDER BY column [ASC|DESC]")
+            false
+        end
     end
 
     def display_results(results)
