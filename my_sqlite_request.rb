@@ -541,12 +541,12 @@ class MySqliteRequest
     def execute_requests()
         puts "DEBUG: Checking errors. Current errors: #{@request_errors.inspect}"
         #   check if request is empty
-        # return "request queue - empty" if check_for_error
+        return "request queue - empty" if check_for_error
 
-        if check_for_error
-            puts "DEBUG: Found errors: #{@request_errors.inspect}" # Add this
-            return "request queue - empty" 
-        end
+        # if check_for_error
+        #     puts "DEBUG: Found errors: #{@request_errors.inspect}" # Add this
+        #     return "request queue - empty" 
+        # end
 
         #   execute request(s)
         @request_queue.each do |operation|
@@ -579,8 +579,8 @@ class MySqliteRequest
         # @request_errors.empty? ? @request_result : @request_errors
         #   refactored your previous line - warren
         # check_for_error ? get_request_result : get_request_errors
-        check_for_error ? (puts "122" ): (puts "111")
-        puts "123"
+        # check_for_error ? (puts "122" ): (puts "111")
+        # puts "123"
     end  
 
     def run_update()

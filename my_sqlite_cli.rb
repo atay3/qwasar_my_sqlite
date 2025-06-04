@@ -4,7 +4,7 @@ require 'readline'
 class MySqliteCli
     def initialize
         @request = MySqliteRequest.new
-      end
+    end
 
     def process_input(input)
         case input.strip.downcase
@@ -18,45 +18,41 @@ class MySqliteCli
     end
 
     def execute_query(query)
-        # @request = MySqliteRequest.new
         # Parse and execute the query
         case query
         when /^SELECT/ then handle_select(query)
-        # when /^JOIN/ then handle_join(query)
-        # when /^ORDER/ then handle_order(query)
         when /^UPDATE/ then handle_update(query)
-        # when /^SET/ then handle_set(query)
-        # when /^INSERT/i then handle_insert(query)
-        # when /^DELETE/i then handle_delete(query)
+        when /^INSERT/i then handle_insert(query)
+        when /^DELETE/i then handle_delete(query)
         else
             puts "Error: unsupported query"
         end
-        
     end
 
     def handle_select(query)
         return if @request.nil?
 
-        if match = query.match(/SELECT\s+(.+?)\s+FROM\s+(\w+)(?:\s+WHERE\s+(.+))?/i)
-            # Parse query
+        # Parse query
+        if match = query.match(/SELECT (.+?) FROM (\w+)(?: WHERE (.+))?(?: JOIN (.+))?(?: ORDER BY (.+))?/i)
             cols = match[1].strip
             table = match[2]
             where_clause = match[3]
-
-            # p cols
-            # p table
-            # p where_clause
+            join_clause = match[4]
+            order_clause = match[5]
       
             @request.from(table)
             handle_select_columns(cols)
-            handle_where(where_clause) if where_clause
+            handle_where(where_clause) if match[3]
+            handle_join(join_clause) if match[4]
+            handle_order(order_clause) if match[5]
       
             display_results(@request.run)
         else
-            puts "Error: Invalid syntax."
+            puts "Error: Invalid SELECT syntax."
         end
     end
 
+    # Helper function for handle_select
     def handle_select_columns(cols)
         # Handle wildcard and requests for specific columns
         if cols == '*'
@@ -69,6 +65,7 @@ class MySqliteCli
     end
 
     def handle_where(where_clause)
+        # Parse query
         if match = where_clause.match(/(\w+)\s*=\s*(?:'([^']+)'|"([^"]+)"|(\S+))/)
             column = match[1]
             value = match[2] || match[3] || match[4]
@@ -83,23 +80,28 @@ class MySqliteCli
         return if @request.nil?
 
         if match = query.match(/UPDATE\s+(\w+)\s+SET\s+(.+?)(?:\s+WHERE\s+(.+))?$/i)
-            # Parse query
             table = match[1].strip
             set_assignments = match[2]
             where_clause = match[3]
 
-            p table
-            p set_assignments
-            p where_clause
+            # p table
+            # p set_assignments
+            # p where_clause
       
             @request.update(table)
             handle_set(set_assignments)
             handle_where(where_clause) if where_clause
       
-            display_results(@request.run)
+            @request.run()
         else
-            puts "Error: Invalid syntax."
+            puts "Error: Invalid UPDATE syntax."
         end
+    end
+
+    def handle_insert(query)
+    end
+
+    def handle_delete(query)
     end
 
     def handle_set(set_assignments)
@@ -109,6 +111,35 @@ class MySqliteCli
             set_data[col] = val.gsub(/['"]/, '')
         end
         @request.instance_variable_set(:@update_data, set_data)
+    end
+
+    def handle_join(query)
+        if match = join_clause.match(/JOIN (\w+)\s+ON\s+(\w+)\.(\w+)\s*=\s*(\w+)\.(\w+)/i)
+            table_b = match[1]
+            table_a_col = match[3]
+            table_b_col = match[5]
+            
+            # Verify tables and columns exist
+            unless File.exist?(table_b)
+              add_error("Table #{table_b} not found")
+              return false
+            end
+            
+            result = @request.join(table_a_column, table_b, table_b_column)
+            
+            if result == 0
+                true
+            else
+                add_error("Join failed with code #{result}")
+                false
+            end
+        else
+            add_error("Invalid JOIN syntax. Use: JOIN table ON table1.column = table2.column")
+            false
+        end
+    end
+
+    def handle_order(query)
     end
 
     def display_results(results)
