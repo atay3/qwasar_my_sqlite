@@ -56,7 +56,6 @@ class MySqliteRequest
         if get_request_queue.length > 0
             is_duplicate = request_query.any? {|query| @request_queue.include?(query)}
             if is_duplicate
-                # add_error("only 1 #{statement} per request [SELECT | UPDATE | INSERT | DELETE]")
                 add_error("only 1 #{statement} per request [#{request_query.join(" | ")}]")
                 return true
             end
@@ -124,6 +123,10 @@ class MySqliteRequest
         @request_errors.append(error_msg)
     end
 
+    def normalize_table_name(name)
+        name.end_with?(".csv") ? name : "#{name}.csv"
+    end
+
     #   returns request_errors FOR DEBUGGING
     def get_request_errors
         @request_errors
@@ -166,6 +169,7 @@ class MySqliteRequest
         #   more modular implementation with file exists check
         ##  TODO check if file is actually a csv file
         puts "check_filename [#{file_name}]\n"
+
         #   check file_name length
         if !check_file_name_length(file_name)
             return -1
@@ -206,6 +210,9 @@ class MySqliteRequest
     def from(table_name)
         #   check for errors
         return false if check_for_error
+
+        table_name = normalize_table_name(table_name)
+
         #   check if file is valid
         return -1 if !check_filename(table_name)
         #   check for errors again?
@@ -354,6 +361,9 @@ class MySqliteRequest
                 return -2
             end
             # p from_table
+
+            filename_db_b = normalize_table_name(filename_db_b)
+
             #   check filename database b if exists
             if check_filename(filename_db_b) == 0
                 table_b_hash = get_table_data(filename_db_b)
@@ -440,6 +450,7 @@ class MySqliteRequest
 #   6
 # Insert Implement a method to insert which will receive a table name (filename). It will continue to build the request.
     def insert(table_name)
+        table_name = normalize_table_name(table_name)
         #   check table if exists
         if check_filename(table_name) == 0
             #   check current sqlite request
@@ -488,7 +499,7 @@ class MySqliteRequest
 # Update Implement a method to update which will receive a table name (filename). It will continue to build the request. An update request might be associated with a where request.
     def update(table_name)
         # puts -5
-        table_name += ".csv" unless table_name.end_with?(".csv")
+        table_name = normalize_table_name(table_name)
         
         if !check_filename(table_name)
             puts -1
@@ -578,7 +589,7 @@ class MySqliteRequest
         # Return results or errors
         # @request_errors.empty? ? @request_result : @request_errors
         #   refactored your previous line - warren
-        # check_for_error ? get_request_result : get_request_errors
+        check_for_error ? get_request_result : get_request_errors
         # check_for_error ? (puts "122" ): (puts "111")
         # puts "123"
     end  
@@ -657,7 +668,7 @@ class MySqliteRequest
             deleted_count
         else
             add_error("DELETE failed - could not save table")
-            -1
+            return -1
         end
     end
 

@@ -7,6 +7,7 @@ class MySqliteCli
     end
 
     def process_input(input)
+        @request = MySqliteRequest.new if @request
         case input.strip.downcase
         when 'exit', 'quit'
             exit 0
@@ -18,7 +19,6 @@ class MySqliteCli
     end
 
     def execute_query(query)
-        # Parse and execute the query
         case query
         when /^SELECT/ then handle_select(query)
         when /^UPDATE/ then handle_update(query)
@@ -88,14 +88,11 @@ class MySqliteCli
             # p set_assignments
             # p where_clause
       
-            if @request.update(table) < 0
-                add_error("Update failed")
-                false
-            else
-                handle_set(set_assignments)
-                handle_where(where_clause) if where_clause
-                @request.run()
-            end
+            @request.update(table)
+            handle_set(set_assignments)
+            handle_where(where_clause) if where_clause
+            
+            @request.run()
         else
             puts "Error: Invalid UPDATE syntax."
         end
@@ -105,6 +102,22 @@ class MySqliteCli
     end
 
     def handle_delete(query)
+        return if @request.nil?
+
+        if match = query.match(/DELETE FROM (\w+)(?:\s+WHERE (.+))?/i)
+            table = match[1]
+            where_clause = match[2]
+
+            @request.from(table)
+            @request.delete()
+
+            handle_where(where_clause) if where_clause
+
+            result = @request.run
+            # puts result.is_a?(Integer) ? "Deleted #{result} rows" : result.to_s
+        else
+            puts "Error: Invalid DELETE syntax."
+        end
     end
 
     def handle_set(set_assignments)
