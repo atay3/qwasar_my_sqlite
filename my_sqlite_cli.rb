@@ -7,6 +7,7 @@ class MySqliteCli
     end
 
     def process_input(input)
+        # Create new reqeust for each query
         @request = MySqliteRequest.new if @request
         case input.strip.downcase
         when 'exit', 'quit'
@@ -48,7 +49,7 @@ class MySqliteCli
       
             display_results(@request.run)
         else
-            puts "Error: Invalid SELECT syntax."
+            puts "Error: Invalid SELECT syntax"
         end
     end
 
@@ -72,7 +73,7 @@ class MySqliteCli
             # p value
             @request.where(column, value)
         else
-            puts "Error: Invalid format."
+            puts "Error: Invalid format"
         end
     end
 
@@ -94,11 +95,36 @@ class MySqliteCli
             
             @request.run()
         else
-            puts "Error: Invalid UPDATE syntax."
+            puts "Error: Invalid UPDATE syntax"
         end
     end
 
     def handle_insert(query)
+        if match = query.match(/INSERT INTO (\w+)\s*(?:\((.+?)\))?\s*VALUES\s*\((.+?)\)/i)
+            table = normalize_table_name(match[1])
+            columns = match[2] ? match[2].split(',').map(&:strip) : nil
+            values = match[3].split(',').map(&:strip).map { |v| v.gsub(/^['"]|['"]$/, '') }
+        
+            # Create data hash (match columns with values)
+            data = if columns
+                     columns.zip(values).to_h
+                   else
+                     # If no columns specified, assume values are in table order
+                     headers = CSV.read(table, headers: true).headers
+                     headers.zip(values).to_h
+                   end
+            
+            if request.insert(table) == 0
+                puts "Insert successful"
+            else
+                "Insert failed"
+            end
+
+            @request.values(data)
+            @request.run
+        else
+            puts "Error: Invalid INSERT syntax. Use: INSERT INTO table (cols) VALUES (vals)"
+        end
     end
 
     def handle_delete(query)
@@ -113,10 +139,11 @@ class MySqliteCli
 
             handle_where(where_clause) if where_clause
 
-            result = @request.run
+            @request.run
+            # result = @request.run
             # puts result.is_a?(Integer) ? "Deleted #{result} rows" : result.to_s
         else
-            puts "Error: Invalid DELETE syntax."
+            puts "Error: Invalid DELETE syntax"
         end
     end
 
