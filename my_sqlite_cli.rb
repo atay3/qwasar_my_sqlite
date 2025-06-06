@@ -101,20 +101,20 @@ class MySqliteCli
 
     def handle_insert(query)
         if match = query.match(/INSERT INTO (\w+)\s*(?:\((.+?)\))?\s*VALUES\s*\((.+?)\)/i)
-            table = normalize_table_name(match[1])
+            table = match[1]
             columns = match[2] ? match[2].split(',').map(&:strip) : nil
             values = match[3].split(',').map(&:strip).map { |v| v.gsub(/^['"]|['"]$/, '') }
         
             # Create data hash (match columns with values)
             data = if columns
-                     columns.zip(values).to_h
-                   else
-                     # If no columns specified, assume values are in table order
-                     headers = CSV.read(table, headers: true).headers
-                     headers.zip(values).to_h
-                   end
+                    columns.zip(values).to_h
+                else
+                    # If no columns specified, assume values are in table order
+                    headers = CSV.read(table, headers: true).headers
+                    headers.zip(values).to_h
+                end
             
-            if request.insert(table) == 0
+            if @request.insert(table) == 0
                 puts "Insert successful"
             else
                 "Insert failed"
@@ -206,7 +206,7 @@ class MySqliteCli
     def display_results(results)
         case results
         when String
-            puts results  # Print the message
+            puts results
         when Array
             if results.empty?
                 puts "No results found"

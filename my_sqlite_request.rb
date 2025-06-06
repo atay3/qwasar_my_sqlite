@@ -95,17 +95,18 @@ class MySqliteRequest
             #   check if join exists
             return -5 if check_duplicate_where_statement(statement)
             return 3
-        when "INSERT", "VALUE"
-            return -6 if check_duplicate_statements(statement, ["INSERT", "VALUE"])
+        when "INSERT"
+            return -6 if check_duplicate_statements(statement, ["INSERT"])
             return 4
-        # end
         when "SET"
             return -7 if check_duplicate_statements(statement, ["SET"])
             return 5
         when "DELETE"
             return -8 if check_duplicate_statements(statement, ["DELETE"])
             return 6
-        #   invalid sqlite statement
+        when "VALUE"
+            return -9 if check_duplicate_statements(statement, ["VALUE"])
+            return 7
         end
         add_error("invalid sqlite statement")
         return -1
@@ -411,14 +412,17 @@ class MySqliteRequest
         #   check table if exists
         if check_filename(table_name) == 0
             #   check current sqlite request
-            if check_sqlite_statement("INSERT") == 0
+            if check_sqlite_statement("INSERT") == 4
                 #   read file - csv to list?
                 table_data = read_csv_file(table_name)
                 #   update @insert_values_data
-                @insert_values_data = {insert: get_table_data(table_name)}
+                # @insert_values_data = {insert: get_table_data(table_name)}
+                set_table_data(table_name)
+                @insert_values_data = {insert: table_name}
+
                 #   add sqlite request
                 add_request_queue("INSERT")
-                return 0
+                self
             end
             add_error("duplicate statement - only 1 of each [INSERT | VALUES]")
             return -2
@@ -439,14 +443,13 @@ class MySqliteRequest
 # Values Implement a method to values which will receive data. (a hash of data on format (key => value)). It will continue to build the request. During the run() you do the insert.
     def values(data)
     #     #   check current sqlite request
-        if check_sqlite_statement("VALUE") == 4
+        if check_sqlite_statement("VALUE") == 7
             if check_values(data) == 0
                 #   check number of elements
                 #   check element types
-                #   add sqlite request
-            add_request_queue("VALUE")
-    #     #   update @insert_values_data
-                return 0
+                @insert_values_data = data
+                add_request_queue("VALUE")
+                self
             end
         end
         add_error("invalid values statement - [not enough values current/required]")
@@ -536,8 +539,11 @@ class MySqliteRequest
             when "JOIN"
                 run_join()
             when "ORDER" then next
-            when "INSERT" then next
-            when "VALUES" then next
+            when "INSERT"
+                if @request_queue.include?("VALUE")
+                    run_insert()
+                end
+            when "VALUE" then next
             else
                 add_error("Unknown operation: #{operation}")
             end
@@ -666,14 +672,62 @@ class MySqliteRequest
         return request_result
     end
 
-    def run_insert
+    def run_insert()
         return -1 unless @table_data && @insert_values_data
       
-        CSV.open(@table_data[:name], "a") do |csv|
-            # Convert values to proper order based on headers
-            row = @table_data[:headers].map { |h| @insert_values_data[:insert][:data].first[h] }
-            csv << row
+        unless File.exist?(@table_data[:name]) && File.writable?(@table_data[:name])
+            add_error("File not found or not writable")
+            return -1
         end
+        
+        # Prepare the new row data
+        new_row = @table_data[:headers].map do |header|
+            @insert_values_data[:insert][:data].first[header] || nil
+        end
+        
+        # Open file in append mode
+        file = File.open(@table_data[:name], 'a')
+        csv = CSV.new(file)
+        csv << new_row
+        file.close 
+
+        return 0
+    end
+
+    def run_join()
+        return -1 unless @table_data && @join_data
+
+        # Check if tables exist
+        unless File.exist?(@table_data[:name]) && File.exist?(@join_data[:table_b])
+            add_error("One or both tables not found")
+            return -1
+        end
+
+        # Read tables
+        table_a = CSV.read(@table_data[:name], headers: true)
+        table_b = CSV.read(@join_data[:table_b], headers: true)
+
+        # Get column indices
+        col_a_index = table_a.headers.index(@join_data[:column_a])
+        col_b_index = table_b.headers.index(@join_data[:column_b])
+
+        unless col_a_index && col_b_index
+            add_error("Columns not found in tables")
+            return -1
+        end
+
+        joined_data = []
+        table_a.each do |row_a|
+            table_b.each do |row_b|
+                if row_a[col_a_index] == row_b[col_b_index]
+                    joined_data << row_a.to_h.merge(row_b.to_h)
+                end
+            end
+        end
+
+        # Update table
+        @table_data[:headers] = (table_a.headers + table_b.headers).uniq
+        @table_data[:data] = joined_data
 
         return 0
     end
