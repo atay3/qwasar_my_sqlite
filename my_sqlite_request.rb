@@ -284,49 +284,6 @@ class MySqliteRequest
         self
     end
 
-    # def where(column_name, criteria)
-    #     return self if check_for_error
-
-    #     # header = @from_table[:headers]
-    #     # where_column = header.find_index(column_name)
-    #     where_column = get_table_headers(column_name)
-
-    #     # if check_columns(column_name, header)
-    #     if check_columns(column_name, where_column)
-    #         result = []
-    #         # where_column = get_table_headers.find_index(column_name)
-    #         #   add each row of table data
-
-    #         @table_data[1..-1].each do |data|
-    #             tmp = []
-    #             if data[where_column] == criteria
-    #                 #   add each column from select query
-    #                 @selected_columns.each do |index|
-    #                     tmp.append(data[index])
-    #                 end
-    #             end
-    #             if row[where_column] == criteria
-    #                 @selected_columns.each do |index|
-    #                   tmp << row[index]
-    #                 end
-    #             end
-    #             result.append(tmp) if !tmp.empty?
-    #         end
-    #         #   no results from where query
-    #         if result.empty?
-    #             puts "where fail - no query results"
-    #             # return 0
-    #             self
-    #         end
-    #         @where_result = result
-    #         p @where_result
-    #         # return 1
-    #         self
-    #     end
-    #     puts "where fail - invalid column(s)"
-    #     # return -1
-    #     self
-    # end
 #   4
 # Join Implement a join method which will load another filename_db and will join both database on a on column.
 # It will be prototyped:
@@ -576,7 +533,8 @@ class MySqliteRequest
                 run_from()
                 puts @queue_result
                 next
-            when "JOIN" then next
+            when "JOIN"
+                run_join()
             when "ORDER" then next
             when "INSERT" then next
             when "VALUES" then next
@@ -706,5 +664,17 @@ class MySqliteRequest
             return
         end
         return request_result
+    end
+
+    def run_insert
+        return -1 unless @table_data && @insert_values_data
+      
+        CSV.open(@table_data[:name], "a") do |csv|
+            # Convert values to proper order based on headers
+            row = @table_data[:headers].map { |h| @insert_values_data[:insert][:data].first[h] }
+            csv << row
+        end
+
+        return 0
     end
 end
