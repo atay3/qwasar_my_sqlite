@@ -238,34 +238,57 @@ class MySqliteRequest
     def check_columns(column_name, table_headers)
         table_headers.include?(column_name)
     end
-# def select(column_name)
-# OR
-# def select([column_name_a, column_name_b])
+
     def select(column_name)
         return false if check_for_error | !@table_data
+        
         parsed_columns = nil
-        case
-        #   multiple columns
-        when column_name.class == Array
-            indices = column_name.map {|column| get_table_headers.find_index(column)}
-            parsed_columns = indices unless indices.include?(nil)
-        #   single column
-        when (column_name.is_a? String)
-            #   * aka wildcard"
-            if column_name == "*" then parsed_columns = get_table_headers
-            else    #   look for column names
-                parsed_columns = get_table_headers.find_index(column_name)
+        headers = get_table_headers
+        
+        case column_name
+        when Array
+            parsed_columns = column_name.map { |col| headers.index(col) }.compact
+        when String
+            if column_name == "*"
+                parsed_columns = (0...headers.length).to_a
+            else
+                parsed_columns = [headers.index(column_name)]
             end
         end
+
         puts "parsed cols = #{parsed_columns}"
-        if !parsed_columns.nil?
+        if !parsed_columns.nil? && !parsed_columns.empty?
             puts "selected cols - #{column_name}"
             @selected_columns = parsed_columns
             add_request_queue("SELECT")
         else
-            add_error("select - invalid [#{column_name.class}]")
+            add_error("select - invalid column(s): #{column_name}")
         end
         self
+        # return false if check_for_error | !@table_data
+        # parsed_columns = nil
+        # case
+        # #   multiple columns
+        # when column_name.class == Array
+        #     indices = column_name.map {|column| get_table_headers.find_index(column)}
+        #     parsed_columns = indices unless indices.include?(nil)
+        # #   single column
+        # when (column_name.is_a? String)
+        #     #   * aka wildcard"
+        #     if column_name == "*" then parsed_columns = get_table_headers
+        #     else    #   look for column names
+        #         parsed_columns = get_table_headers.find_index(column_name)
+        #     end
+        # end
+        # puts "parsed cols = #{parsed_columns}"
+        # if !parsed_columns.nil?
+        #     puts "selected cols - #{column_name}"
+        #     @selected_columns = parsed_columns
+        #     add_request_queue("SELECT")
+        # else
+        #     add_error("select - invalid [#{column_name.class}]")
+        # end
+        # self
     end
 #   3
 # Where Implement a where method which will take 2 arguments: column_name and value. It will continue to build the request. During the run() you will filter the result which match the value.
@@ -411,10 +434,10 @@ class MySqliteRequest
         table_name = normalize_table_name(table_name)
         #   check table if exists
         if check_filename(table_name) == 0
-            cur_ins = check_sqlite_statement("INSERT")
-            p "cur_ins is #{cur_ins}"
-            # if check_sqlite_statement("INSERT") == 4
-            if cur_ins == 0
+            # cur_ins = check_sqlite_statement("INSERT")
+            # p "cur_ins is #{cur_ins}"
+            if check_sqlite_statement("INSERT") == 4
+            # if cur_ins == 0
                 #   read file - csv to list?
                 # table_data = read_csv_file(table_name)
                 @table_data = set_table_data(table_name)
@@ -427,7 +450,6 @@ class MySqliteRequest
                 return self
             else
                 add_error("duplicate INSERT statement")
-                puts "duplicate insert statement"
                 return -2
             end
         end
@@ -447,10 +469,10 @@ class MySqliteRequest
 # Values Implement a method to values which will receive data. (a hash of data on format (key => value)). It will continue to build the request. During the run() you do the insert.
     def values(data)
     #   check current sqlite request
-        cur = check_sqlite_statement("VALUE")
-        p "cur is #{cur}"
-        # if check_sqlite_statement("VALUE") == 4
-        if cur == 4
+        # cur = check_sqlite_statement("VALUE")
+        # p "cur is #{cur}"
+        if check_sqlite_statement("VALUE") == 4
+        # if cur == 4
             if check_values(data) == 0
                 #   check number of elements
                 #   check element types
@@ -526,13 +548,13 @@ class MySqliteRequest
         #     puts "DEBUG: Found errors: #{@request_errors.inspect}" # Add this
         #     return "request queue - empty" 
         # end
+        @request_result = [] # Initialize results storage
 
-        #   execute request(s)
         @request_queue.each do |operation|
             #   iterate through the queue and execute each request
             case operation
             when "SELECT"
-                run_select()
+                @request_result = run_select() || []
             when "UPDATE" 
                 next unless @update_data
                 run_update()
@@ -559,11 +581,10 @@ class MySqliteRequest
         # print out 
         puts "q result\n[#{@queue_result}]\n"
         # Return results or errors
-        # @request_errors.empty? ? @request_result : @request_errors
-        #   refactored your previous line - warren
         check_for_error ? get_request_result : get_request_errors
         # check_for_error ? (puts "122" ): (puts "111")
         # puts "123"
+        @request_result.empty? ? "No results found" : @request_result
     end  
 
     def run_update()
@@ -654,30 +675,45 @@ class MySqliteRequest
         #       add err
     end
 
+    # def run_select()
+    #     #   check if from() exists in queue
+    #     #   check if select() exists in queue
+    #     #   if exists
+    #     #       traverse row, then col
+    #     #           add data[row][col] to result
+    #     #       set result
+    #     #   check if selected_columns is not nil
+    #     if @selected_columns && @table_data
+    #         request_result = @table_data[:data].map do 
+    #             |row| row.values_at(*@selected_columns)
+    #             # p row
+    #         end
+    #         #   print results correct?
+    #         #   might need to fix later
+    #         # request_result.each {|x| p x}
+    #     else
+    #         #   from fails
+    #         add_error("missing SELECT") if !@table_data
+    #         #   select fails   
+    #         add_error("missing SELECT") if !@selected_columns
+    #         return
+    #     end
+    #     return request_result
+    # end
+
     def run_select()
-        #   check if from() exists in queue
-        #   check if select() exists in queue
-        #   if exists
-        #       traverse row, then col
-        #           add data[row][col] to result
-        #       set result
-        #   check if selected_columns is not nil
-        if @selected_columns && @table_data
-            request_result = @table_data[:data].map do 
-                |row| row.values_at(*@selected_columns)
-                # p row
+        return nil unless @selected_columns && @table_data
+    
+        headers = get_table_headers
+        data = @table_data[:data]
+        
+        # Convert data rows to hashes with header keys
+        data.map do |row|
+            @selected_columns.each_with_object({}) do |col_index, hash|
+                header = headers[col_index]
+                hash[header] = row[col_index]
             end
-            #   print results correct?
-            #   might need to fix later
-            # request_result.each {|x| p x}
-        else
-            #   from fails
-            add_error("missing SELECT") if !@table_data
-            #   select fails   
-            add_error("missing SELECT") if !@selected_columns
-            return
         end
-        return request_result
     end
 
     def run_insert()
