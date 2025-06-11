@@ -95,9 +95,9 @@ class MySqliteRequest
             #   check if join exists
             return -5 if check_duplicate_where_statement(statement)
             return 3
-        when "INSERT"
-            return -6 if check_duplicate_statements(statement, ["INSERT"])
-            return 4
+        # when "INSERT"
+        #     return -6 if check_duplicate_statements(statement, ["INSERT"])
+        #     return 4
         when "SET"
             return -7 if check_duplicate_statements(statement, ["SET"])
             return 5
@@ -105,8 +105,8 @@ class MySqliteRequest
             return -8 if check_duplicate_statements(statement, ["DELETE"])
             return 6
         when "VALUE"
-            return -9 if check_duplicate_statements(statement, ["VALUE"])
-            return 7
+            return -6 if check_duplicate_statements(statement, ["VALUE"])
+            return 4
         end
         add_error("invalid sqlite statement")
         return -1
@@ -411,21 +411,25 @@ class MySqliteRequest
         table_name = normalize_table_name(table_name)
         #   check table if exists
         if check_filename(table_name) == 0
-            #   check current sqlite request
-            if check_sqlite_statement("INSERT") == 4
+            cur_ins = check_sqlite_statement("INSERT")
+            p "cur_ins is #{cur_ins}"
+            # if check_sqlite_statement("INSERT") == 4
+            if cur_ins == 0
                 #   read file - csv to list?
-                table_data = read_csv_file(table_name)
-                #   update @insert_values_data
+                # table_data = read_csv_file(table_name)
+                @table_data = set_table_data(table_name)
                 # @insert_values_data = {insert: get_table_data(table_name)}
-                set_table_data(table_name)
+                # set_table_data(table_name)
                 @insert_values_data = {insert: table_name}
 
                 #   add sqlite request
                 add_request_queue("INSERT")
-                self
+                return self
+            else
+                add_error("duplicate INSERT statement")
+                puts "duplicate insert statement"
+                return -2
             end
-            add_error("duplicate statement - only 1 of each [INSERT | VALUES]")
-            return -2
         end
         return -1
     end
@@ -442,8 +446,11 @@ class MySqliteRequest
 #   7
 # Values Implement a method to values which will receive data. (a hash of data on format (key => value)). It will continue to build the request. During the run() you do the insert.
     def values(data)
-    #     #   check current sqlite request
-        if check_sqlite_statement("VALUE") == 7
+    #   check current sqlite request
+        cur = check_sqlite_statement("VALUE")
+        p "cur is #{cur}"
+        # if check_sqlite_statement("VALUE") == 4
+        if cur == 4
             if check_values(data) == 0
                 #   check number of elements
                 #   check element types
@@ -451,9 +458,10 @@ class MySqliteRequest
                 add_request_queue("VALUE")
                 self
             end
+        else
+            add_error("invalid values statement - [not enough values current/required]")
+            return -1
         end
-        add_error("invalid values statement - [not enough values current/required]")
-        return -1
     end
 #   8
 # Update Implement a method to update which will receive a table name (filename). It will continue to build the request. An update request might be associated with a where request.
@@ -679,17 +687,21 @@ class MySqliteRequest
             add_error("File not found or not writable")
             return -1
         end
-        
+
+        headers = @table_data[:headers]
+    
         # Prepare the new row data
-        new_row = @table_data[:headers].map do |header|
-            @insert_values_data[:insert][:data].first[header] || nil
-        end
+        new_row = if @insert_values_data.is_a?(Hash) && @insert_values_data.keys.all? {|k| k.is_a?(Integer)}
+                    # Handle index-based values
+                    headers.each_with_index.map { |_, i| @insert_values_data[i] }
+                else
+                    # Handle hash with column names
+                    headers.map { |h| @insert_values_data[h] }
+                end
         
-        # Open file in append mode
-        file = File.open(@table_data[:name], 'a')
-        csv = CSV.new(file)
-        csv << new_row
-        file.close 
+        CSV.open(@table_data[:name], 'a') do |csv|
+            csv << new_row
+        end
 
         return 0
     end

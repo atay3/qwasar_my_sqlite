@@ -100,7 +100,7 @@ class MySqliteCli
     end
 
     def handle_insert(query)
-        if match = query.match(/INSERT INTO (\w+)\s*(?:\((.+?)\))?\s*VALUES\s*\((.+?)\)/i)
+        if match = query.match(/INSERT (\w+)\s*(?:\((.+?)\))?\s*VALUES\s*\((.+?)\)/i)
             table = match[1]
             columns = match[2] ? match[2].split(',').map(&:strip) : nil
             values = match[3].split(',').map(&:strip).map { |v| v.gsub(/^['"]|['"]$/, '') }
@@ -109,28 +109,25 @@ class MySqliteCli
             data = if columns
                     columns.zip(values).to_h
                 else
-                    # If no columns specified, assume values are in table order
-                    headers = CSV.read(table, headers: true).headers
-                    headers.zip(values).to_h
+                    values.each_with_index.to_h { |v, i| [i, v] }
                 end
             
-            if @request.insert(table) == 0
-                puts "Insert successful"
-            else
-                "Insert failed"
-            end
+            # if @request.insert(table) == 0
+            #     puts "Insert successful"
+            # else
+            #     "Insert failed"
+            # end
 
-            @request.values(data)
-            @request.run
+            @request.insert(table).values(data).run
         else
-            puts "Error: Invalid INSERT syntax. Use: INSERT INTO table (cols) VALUES (vals)"
+            puts "Error: Invalid INSERT syntax"
         end
     end
 
     def handle_delete(query)
         return if @request.nil?
 
-        if match = query.match(/DELETE FROM (\w+)(?:\s+WHERE (.+))?/i)
+        if match = query.match(/DELETE (\w+)(?:\s+WHERE (.+))?/i)
             table = match[1]
             where_clause = match[2]
 
@@ -157,7 +154,7 @@ class MySqliteCli
     end
 
     def handle_join(join_clause)
-        if match = join_clause.match(/JOIN (\w+)\s+ON\s+(\w+)\.(\w+)\s*=\s*(\w+)\.(\w+)/i)
+        if match = join_clause.match(/JOIN (\w+)\s+(\w+)\s+(\w+)/i)
             table_b = match[1]
             table_a_col = match[3]
             table_b_col = match[5]
@@ -175,19 +172,19 @@ class MySqliteCli
                 false
             end
         else
-            add_error("Invalid JOIN syntax. Use: JOIN table ON table1.column = table2.column")
+            add_error("Invalid JOIN syntax")
             false
         end
     end
 
     def handle_order(order_clause)
-        if match = order_clause.match(/ORDER BY (\w+)(?:\s+(ASC|DESC))?/i)
+        if match = order_clause.match(/ORDER(\w+)(?:\s+(ASC|DESC))?/i)
             column = match[1]
             direction = match[2] ? match[2].downcase.to_sym : :asc # Default to ASC
             
             # Validate direction
             unless [:asc, :desc].include?(direction)
-                add_error("Invalid ORDER BY direction")
+                add_error("Invalid ORDER direction")
                 return false
             end
             
@@ -198,7 +195,7 @@ class MySqliteCli
                 false
             end
         else
-            add_error("Invalid ORDER BY syntax. Use: ORDER BY column [ASC|DESC]")
+            add_error("Invalid ORDER BY syntax")
             false
         end
     end
