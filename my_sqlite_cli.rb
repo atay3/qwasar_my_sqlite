@@ -110,7 +110,7 @@ class MySqliteCli
     end
 
     def handle_where(where_clause)
-        unless join_clause&.include?("WHERE")
+        unless where_clause&.include?("WHERE")
             puts "No WHERE clause found"
             return false
         end
@@ -152,7 +152,7 @@ class MySqliteCli
     end
 
     def handle_insert(query)
-        unless join_clause&.include?("INSERT")
+        unless insert_clause&.include?("INSERT")
             puts "No INSERT clause found"
             return false
         end
@@ -241,7 +241,7 @@ class MySqliteCli
     end
 
     def handle_order(order_clause)
-        unless join_clause&.include?("ORDER")
+        unless order_clause&.include?("ORDER")
             puts "No ORDER clause found"
             return false
         end
