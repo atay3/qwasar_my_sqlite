@@ -38,14 +38,14 @@ class MySqliteCli
             cols = match[1].strip
             table = match[2]
             where_clause = match[3]
+            order_column = match[5]
             join_clause = match[4]
-            order_clause = match[5]
       
             @request.from(table)
             handle_select_columns(cols)
-            handle_where(where_clause) if match[3]
-            handle_join(join_clause) if match[4]
-            handle_order(order_clause) if match[5]
+            handle_where(where_clause) if where_clause
+            handle_join(join_clause) if join_clause
+            handle_order(order_clause) if order_column
       
             display_results(@request.run)
         else
@@ -178,24 +178,24 @@ class MySqliteCli
     end
 
     def handle_order(order_clause)
-        if match = order_clause.match(/ORDER(\w+)(?:\s+(ASC|DESC))?/i)
+        if match = order_clause.match(/ORDER\s+(\w+)(?:\s+(ASC|DESC))?/i)
             column = match[1]
             direction = match[2] ? match[2].downcase.to_sym : :asc # Default to ASC
             
             # Validate direction
             unless [:asc, :desc].include?(direction)
-                add_error("Invalid ORDER direction")
+                puts "Invalid ORDER direction"
                 return false
             end
             
-            if @request.order(order_direction, column) == 0
+            if @request.order(direction, column) == 0
                 true
             else
-                add_error("Order failed")
+                puts "Order failed"
                 false
             end
         else
-            add_error("Invalid ORDER BY syntax")
+            puts "Invalid ORDER syntax"
             false
         end
     end

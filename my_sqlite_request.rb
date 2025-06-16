@@ -246,19 +246,21 @@ class MySqliteRequest
         headers = get_table_headers
         
         case column_name
+        # Multiple columns
         when Array
             parsed_columns = column_name.map { |col| headers.index(col) }.compact
         when String
+            # Select all columns
             if column_name == "*"
                 parsed_columns = (0...headers.length).to_a
-            else
+            else # Single columns
                 parsed_columns = [headers.index(column_name)]
             end
         end
 
-        puts "parsed cols = #{parsed_columns}"
+        # puts "parsed cols = #{parsed_columns}"
         if !parsed_columns.nil? && !parsed_columns.empty?
-            puts "selected cols - #{column_name}"
+            # puts "selected cols - #{column_name}"
             @selected_columns = parsed_columns
             add_request_queue("SELECT")
         else
@@ -367,13 +369,13 @@ class MySqliteRequest
 # It will be prototyped:
 
     def check_order(order)
-        puts "order is #{order}"
+        # puts "order is #{order}"
         case order
         when :asc
-            puts "asc"
+            # puts "asc"
             return 1
         when :desc
-            puts "desc"
+            # puts "desc"
             return -1
         else
             return 0
@@ -381,49 +383,88 @@ class MySqliteRequest
     end
     
     def order_sort(current_table, column_name, valid_order, table_headers)
-        # p "valid order #{valid_order}"
-        #   sort table data by column depending on order
         column_index = table_headers.find_index(column_name)
-        # p "sorting by col #{column_index}"
-        result = current_table[1..-1].sort_by { |row| row[column_index] * valid_order }
-        # p "result\n#{result}"
-        #   combine table data - headers + sorted result
-        tmp_table = [table_headers]
-        tmp_table.append(result)
-        return tmp_table
+        rows = current_table[:data]
+        
+        column_index = table_headers.find_index(column_name)
+        rows = current_table[:data]
+        
+        sorted_rows = rows.sort_by do |row|
+            value = row[column_index]
+            # For descending order, we'll invert numeric values
+            # For strings, we'll handle differently
+            if value.is_a?(Numeric)
+                valid_order == :desc ? -value : value
+            else
+                valid_order == :desc ? value.to_s.reverse : value.to_s
+            end
+        end
+
+        # Return new table structure with sorted data
+        {
+            name: current_table[:name],
+            headers: table_headers,
+            data: sorted_rows
+        }
     end
 
     def order(order, column_name)
         #   check column name if exists
-        if @table_data
-            current_table = @table_data
-            table_headers = @table_data[:headers]
-        elsif @from_table
-            current_table = @from_table
-            table_headers = @from_table[:headers]
-        end
-        # p current_table
-        #   check for valid column
-#   TODO >>>>>>>>>>>>>>>>        add valid column check table.column notation <<<<<<<<
-        if check_columns(column_name, table_headers) == false
-            add_error("Error: no such column #{column_name}")
+#         if @table_data
+#             current_table = @table_data
+#             table_headers = @table_data[:headers]
+#         elsif @from_table
+#             current_table = @from_table
+#             table_headers = @from_table[:headers]
+#         end
+#         # p current_table
+#         #   check for valid column
+# #   TODO >>>>>>>>>>>>>>>>        add valid column check table.column notation <<<<<<<<
+#         if check_columns(column_name, table_headers) == false
+#             add_error("Error: no such column #{column_name}")
+#             return -1
+#         end
+# #   TODO >>>>>>>>>>>>>>         add to_lower check? <<<<<<<<<<<
+#         #   check if duplicate column
+#         if table_headers.count(column_name) > 1
+#             add_error("Error: ambiguous column name: #{column_name}")
+#             return -2
+#         end
+#         #   check if valid order
+#         valid_order = check_order(order)
+#         if valid_order != 0
+#             @table_data = order_sort(current_table, column_name, valid_order, table_headers)
+#             add_request_queue("ORDER")
+#             return 0
+#         end
+#         add_error("Invalid Order - [ ASC | DESC ] only")
+#         return -3
+        # Validate order direction first
+        unless [:asc, :desc].include?(order)
+            add_error("Invalid Order - [ ASC | DESC ] only")
             return -1
         end
-#   TODO >>>>>>>>>>>>>>         add to_lower check? <<<<<<<<<<<
-        #   check if duplicate column
-        if table_headers.count(column_name) > 1
-            add_error("Error: ambiguous column name: #{column_name}")
+
+        # Get table data
+        current_table = @table_data || @from_table
+        unless current_table
+            add_error("No table data available")
             return -2
         end
-        #   check if valid order
-        valid_order = check_order(order)
-        if valid_order != 0
-            @table_data = order_sort(current_table, column_name, valid_order, table_headers)
-            add_request_queue("ORDER")
-            return 0
+
+        table_headers = current_table[:headers]
+        
+        # Validate column exists
+        unless table_headers.include?(column_name)
+            add_error("Error: no such column #{column_name}")
+            return -3
         end
-        add_error("Invalid Order - [ ASC | DESC ] only")
-        return -3
+        puts "Before sort: #{@table_data[:data].inspect}"
+        # Perform the sort
+        @table_data = order_sort(current_table, column_name, order, table_headers)
+        puts "After sort: #{@table_data[:data].inspect}"
+        add_request_queue("ORDER")
+        return 0
     end
 
     # def insert_into_values
