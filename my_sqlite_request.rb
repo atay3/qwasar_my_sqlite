@@ -3,10 +3,6 @@ require 'csv'
 #   research
 #   https://www.rubyguides.com/2018/10/parse-csv-ruby/
 
-#   note to self / TODO
-#       project requirements - add row id
-#       parse column table - to lowercase because its not case-sensitive
-
 class MySqliteRequest
     #   It will have a similar behavior than a request on the real sqlite
     #   All methods, except run, will return an instance of request_queue
@@ -47,7 +43,6 @@ class MySqliteRequest
     end
 
     def add_request_queue(statement)
-        # p "request_queue #{@request_queue}"
         @request_queue.append(statement)
     end
 
@@ -90,14 +85,9 @@ class MySqliteRequest
         when "JOIN"
             return -4 if check_duplicate_statements(statement, ["JOIN"])
             return 2
-#       >>>>>>>>>>>>>>> this where is going to fail, please refactor <<<<<<<<<<<
         when "WHERE"
-            #   check if join exists
             return -5 if check_duplicate_where_statement(statement)
             return 3
-        # when "INSERT"
-        #     return -6 if check_duplicate_statements(statement, ["INSERT"])
-        #     return 4
         when "SET"
             return -7 if check_duplicate_statements(statement, ["SET"])
             return 5
@@ -132,12 +122,6 @@ class MySqliteRequest
     def get_request_errors
         @request_errors
     end
-#   1
-# From Implement a from method which must be present on each request. 
-# From will take a parameter and it will be the name of the table
-# (technically a table_name is also a filename (.csv))
-# It will be prototyped:
-
 
     def check_file_name_length(file_name)
         #   minimum name length - 5 i.e. "a.csv"
@@ -180,9 +164,6 @@ class MySqliteRequest
         end
         return -2
     end
-
-    #   TODO check for specific .csv files?
-    #       nba_players.csv nba_player_data.csv
 
     def set_table_data(table_name)
         data_from_csv = read_csv_file(table_name) 
