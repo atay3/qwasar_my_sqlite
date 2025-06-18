@@ -30,56 +30,11 @@ class MySqliteCli
         end
     end
 
-    # def handle_select(query)
-    #     return if @request.nil?
-
-    #     pattern = %r{
-    #         SELECT\s+(?<cols>.+?)\s+
-    #         FROM\s+(?<table>\w+)\s*
-    #         (?:WHERE\s+(?<where>.+?)\s*)?
-    #         (?:JOIN\s+(?<join>.+?)\s*)?
-    #         (?:ORDER\s+(?<order_col>\w+)\s*)?
-    #     }ix
-
-    #     # Parse query
-    #     if match = query.match(pattern)
-    #     # if match = query.match(/SELECT\s+(.+?)\s+FROM\s+(\w+)(?:\s+WHERE\s+(.+?))?(?:\s+JOIN\s+(.+?))?(?:\s+ORDER\s+(\w+)(?:\s+(ASC|DESC))?)?/i)
-    #         # cols = match[1].strip
-    #         # table = match[2]
-    #         # where_clause = match[3]
-    #         # join_clause = match[4]
-    #         # order_clause = match[5]
-    #         # order_direction = match[6]
-    #         cols = match[:cols].strip
-    #         table = match[:table]
-    #         where_clause = match[:where]
-    #         join_clause = match[:join]
-    #         order_clause = match[:order_col]
-    #         # order_direction = match[:order_dir]
-      
-    #         @request.from(table)
-    #         handle_select_columns(cols)
-    #         handle_where(where_clause) if where_clause
-    #         handle_join(join_clause) if join_clause
-    #         # handle_order(order_clause) if order_clause
-    #         if order_clause
-    #             puts "ORDER clause found"
-    #             handle_order(order_clause)
-    #         else
-    #             puts "No ORDER found"
-    #         end
-      
-    #         display_results(@request.run)
-    #     else
-    #         puts "Error: Invalid SELECT syntax"
-    #     end
-    # end
-
     def handle_select(query)
         return if @request.nil?
     
         # Get SELECT and FROM
-        if base_match = query.match(/SELECT\s+(?<cols>.+?)\s+FROM\s+(?<table>\w+)/i)
+        if base_match = query.match(/SELECT\s+(?<cols>.+?)\s+FROM\s+([\w\.]+)/i)
             cols = base_match[:cols].strip
             table = base_match[:table]
             
@@ -111,13 +66,11 @@ class MySqliteCli
 
     def handle_where(where_clause)
         unless where_clause&.include?("WHERE")
-            puts "No WHERE clause found"
             return false
         end
 
         # Parse query
         if match = where_clause.match(/(\w+)\s*=\s*(?:'([^']+)'|"([^"]+)"|(\S+))/)
-        # if match = where_clause.match(/WHERE\s+(\w+)\s*=\s*(?:'([^']+)'|"([^"]+)"|(\S+))(?:$|\s+(?:ORDER|JOIN|))/i)
             column = match[1]
             value = match[2] || match[3] || match[4]
             # p value
@@ -132,14 +85,10 @@ class MySqliteCli
     def handle_update(query)
         return if @request.nil?
 
-        if match = query.match(/UPDATE\s+(\w+)\s+SET\s+(.+?)(?:\s+WHERE\s+(.+))?$/i)
+        if match = query.match(/UPDATE\s+([\w\.]+)\s+SET\s+(.+?)(?:\s+WHERE\s+(.+))?$/i)
             table = match[1].strip
             set_assignments = match[2]
             where_clause = match[3]
-
-            # p table
-            # p set_assignments
-            # p where_clause
       
             @request.update(table)
             handle_set(set_assignments)
@@ -152,12 +101,17 @@ class MySqliteCli
     end
 
     def handle_insert(query)
-        unless insert_clause&.include?("INSERT")
-            puts "No INSERT clause found"
+        unless query&.include?("INSERT")
             return false
         end
 
-        if match = query.match(/INSERT (\w+)\s*(?:\((.+?)\))?\s*VALUES\s*\((.+?)\)/i)
+        pattern = %r{
+            INSERT\s+([\w\.]+)\s*
+            (?:\(\s*([^)]+)\s*\)\s*)?
+            VALUES\s*\(\s*([^)]+)\s*\)
+        }ix
+
+        if match = query.match(pattern)
             table = match[1]
             columns = match[2] ? match[2].split(',').map(&:strip) : nil
             values = match[3].split(',').map(&:strip).map { |v| v.gsub(/^['"]|['"]$/, '') }
@@ -169,13 +123,11 @@ class MySqliteCli
                     values.each_with_index.to_h { |v, i| [i, v] }
                 end
             
-            # if @request.insert(table) == 0
-            #     puts "Insert successful"
-            # else
-            #     "Insert failed"
-            # end
-
-            @request.insert(table).values(data).run
+            if @request.insert(table) == 0
+                @request.values(data).run
+            else
+                puts "Insert failed"
+            end            
         else
             puts "Error: Invalid INSERT syntax"
         end
@@ -184,7 +136,7 @@ class MySqliteCli
     def handle_delete(query)
         return if @request.nil?
 
-        if match = query.match(/DELETE (\w+)(?:\s+WHERE (.+))?/i)
+        if match = query.match(/DELETE\s+([\w\.]+)(?:\s+WHERE\s+(.+))?/i)
             table = match[1]
             where_clause = match[2]
 
@@ -194,8 +146,6 @@ class MySqliteCli
             handle_where(where_clause) if where_clause
 
             @request.run
-            # result = @request.run
-            # puts result.is_a?(Integer) ? "Deleted #{result} rows" : result.to_s
         else
             puts "Error: Invalid DELETE syntax"
         end
@@ -217,18 +167,25 @@ class MySqliteCli
             return false
         end
 
-        if match = join_clause.match(/JOIN (\w+)\s+(\w+)\s+(\w+)/i)
-            table_b = match[1]
+        if match = join_clause.match(/JOIN\s+([\w\.]+)\s+ON\s+(\w+)\.(\w+)\s*=\s*(\w+)\.(\w+)/i)
+            table_b_file = match[1]
             table_a_col = match[3]
             table_b_col = match[5]
             
             # Verify tables and columns exist
-            unless File.exist?(table_b)
-              puts "Table #{table_b} not found"
-              return false
+            unless File.exist?(table_b_file)
+                puts "Table #{table_b_file} not found"
+                return false
             end
+
+            # Set join data
+            @request.instance_variable_set(:@join_data, {
+                table_b: table_b_file,
+                column_a: table_a_col,
+                column_b: table_b_col
+            })
             
-            if @request.join(table_a_column, table_b, table_b_column) == 0
+            if @request.join(table_a_col, table_b_file, table_b_col) == 0
                 return true
             else
                 puts "Join failed"
@@ -242,12 +199,10 @@ class MySqliteCli
 
     def handle_order(order_clause)
         unless order_clause&.include?("ORDER")
-            puts "No ORDER clause found"
             return false
         end
 
         if match = order_clause.match(/ORDER\s+(\w+)(?:\s+(ASC|DESC))?/i)
-            puts "Finished parsing ORDER query"
             column = match[1]
             direction = match[2] ? match[2].downcase.to_sym : :asc # Default to ASC
             
@@ -284,8 +239,6 @@ class MySqliteCli
                     puts cols.map { |col| row[col].to_s }.join(" | ")
                 end
             end
-        # when nil
-        #     puts "No results found"
         end
     end
 
