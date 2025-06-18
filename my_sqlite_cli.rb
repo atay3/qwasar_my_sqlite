@@ -34,9 +34,9 @@ class MySqliteCli
         return if @request.nil?
     
         # Get SELECT and FROM
-        if base_match = query.match(/SELECT\s+(?<cols>.+?)\s+FROM\s+([\w\.]+)/i)
+        if base_match = query.match(/SELECT\s+(?<cols>.+?)\s+FROM\s+(?<table>[\w\.]+)/i)
             cols = base_match[:cols].strip
-            table = base_match[:table]
+            table = base_match[:table].strip
             
             @request.from(table)
             handle_select_columns(cols)

@@ -233,11 +233,6 @@ class MySqliteRequest
 
         return self
     end
-#   2
-#   Select Implement a where method which will take one argument 
-#   a string OR an array of string. It will continue to build the request. 
-#   During the run() you will collect on the result only the columns sent as parameters to select :-).
-# It will be prototyped:
 
     def check_columns(column_name, table_headers)
         table_headers.include?(column_name)
@@ -262,9 +257,7 @@ class MySqliteRequest
             end
         end
 
-        # puts "parsed cols = #{parsed_columns}"
         if !parsed_columns.nil? && !parsed_columns.empty?
-            # puts "selected cols - #{column_name}"
             @selected_columns = parsed_columns
             add_request_queue("SELECT")
         else
@@ -272,8 +265,6 @@ class MySqliteRequest
         end
         self
     end
-#   3
-# Where Implement a where method which will take 2 arguments: column_name and value. It will continue to build the request. During the run() you will filter the result which match the value.
 
     def where(column_name, criteria)
         return self if check_for_error
@@ -289,10 +280,6 @@ class MySqliteRequest
         add_error("Invalid column in WHERE clause")
         self
     end
-
-#   4
-# Join Implement a join method which will load another filename_db and will join both database on a on column.
-# It will be prototyped:
 
     def join_combine_tables(column_on_db_a, table_b_hash, column_on_db_b)
         # Get column indices
@@ -318,23 +305,6 @@ class MySqliteRequest
             headers: combined_headers,
             data: joined_data
         }
-        # #   create combined data
-        # table_combined = []
-        # # table_b_data = read_csv_file(filename_db_b)
-        # a_index = @from_table[:headers].find_index(column_on_db_a)
-        # # b_headers = get_table_headers(table_b_data)
-        # b_index = table_b_hash[:headers].find_index(column_on_db_b)
-        # #   add headers of both tables
-        # table_combined.append(@from_table[:headers] + table_b_hash[:headers])
-        # #   add rows from both if respective column values are equal
-        # @from_table[:data][1..-1].each do |a_row|
-        #     table_b_hash[:data][1..-1].each do |b_row|
-        #         if a_row[a_index] == b_row[b_index]
-        #             table_combined.append(a_row + b_row)
-        #         end
-        #     end
-        # end
-        # return table_combined
     end
 
     def join(column_on_db_a, filename_db_b, column_on_db_b)
@@ -342,8 +312,7 @@ class MySqliteRequest
 
         #   Check for previous join
         if check_sqlite_statement("JOIN") >= 0
-            #   Check column for database a if exist
-            # if check_columns(column_on_db_a, @from_table[:headers]) == false
+            #   Check column for database a if exists
             unless @table_data && check_columns(column_on_db_a, @table_data[:headers])
                 add_error("Error: no such column #{column_on_db_a}")
                 return -2
@@ -375,18 +344,12 @@ class MySqliteRequest
         end
         return -1
     end
-#   5
-# Order Implement an order method which will received two parameters, order (:asc or :desc) and column_name. It will sort depending on the order base on the column_name.
-# It will be prototyped:
 
     def check_order(order)
-        # puts "order is #{order}"
         case order
         when :asc
-            # puts "asc"
             return 1
         when :desc
-            # puts "desc"
             return -1
         else
             return 0
@@ -402,8 +365,7 @@ class MySqliteRequest
         
         sorted_rows = rows.sort_by do |row|
             value = row[column_index]
-            # For descending order, we'll invert numeric values
-            # For strings, we'll handle differently
+            # For descending order, invert numeric values
             if value.is_a?(Numeric)
                 valid_order == :desc ? -value : value
             else
@@ -448,10 +410,6 @@ class MySqliteRequest
         return 0
     end
 
-    # def insert_into_values
-    # end
-#   6
-# Insert Implement a method to insert which will receive a table name (filename). It will continue to build the request.
     def insert(table_name)
         table_name = normalize_table_name(table_name)
         #   check table if exists
@@ -471,6 +429,7 @@ class MySqliteRequest
         return -1
     end
 
+    # Checks for valid values
     def check_values(value_data)
         # Check if data is a Hash or index-based structure
         unless value_data.is_a?(Hash) || (value_data.is_a?(Array) && value_data.all? {|k,v| k.is_a?(Integer) })
@@ -505,14 +464,11 @@ class MySqliteRequest
         return 0
     end
 
-#   7
-# Values Implement a method to values which will receive data. (a hash of data on format (key => value)). It will continue to build the request. During the run() you do the insert.
+    # Receive data (a hash of data on format (key => value))
     def values(data)
     #   check current sqlite request
         if check_sqlite_statement("VALUE") == 4
             if check_values(data) == 0
-                #   check number of elements
-                #   check element types
                 @insert_values_data = data
                 add_request_queue("VALUE")
                 self
@@ -522,8 +478,7 @@ class MySqliteRequest
             return -1
         end
     end
-#   8
-# Update Implement a method to update which will receive a table name (filename). It will continue to build the request. An update request might be associated with a where request.
+    
     def update(table_name)
         table_name = normalize_table_name(table_name)
         
@@ -540,11 +495,9 @@ class MySqliteRequest
         self
     end
 
-#   9
-# Set Implement a method to update which will receive data (a hash of data on format (key => value)). It will perform the update of attributes on all matching row. An update request might be associated with a where request.
+    # Update which will receive data (a hash of data on format (key => value))
     def set(data)
         if check_sqlite_statement("SET") == -7
-            # add_error("Duplicate SET statement")
             return -7
         end 
         @update_data = data
@@ -552,30 +505,23 @@ class MySqliteRequest
         self
     end
 
-#   10
-# Delete Implement a delete method. It set the request to delete on all matching row. It will continue to build the request. An delete request might be associated with a where request.
+    # Set the request to delete on all matching rows
     def delete()
         if check_sqlite_statement("DELETE") == -8
             return -8
         end
         add_request_queue("DELETE")
-        self # Return self for chaining
+        self
     end
 
-#   11
-# Run Implement a run method and it will execute the request.
+    # Execute the request
     def run()
         execute_requests()
     end
 
     def execute_requests()
-        puts "DEBUG: Checking errors. Current errors: #{@request_errors.inspect}"
         return "request queue - empty" if check_for_error
 
-        # if check_for_error
-        #     puts "DEBUG: Found errors: #{@request_errors.inspect}" # Add this
-        #     return "request queue - empty" 
-        # end
         @request_result = [] # Initialize results storage
 
         @request_queue.each do |operation|
@@ -591,11 +537,11 @@ class MySqliteRequest
                 run_delete()
             when "WHERE" then next
             when "FROM"
-                @request_result = run_from()
+                @request_result = run_from() || []
                 # puts @queue_result
                 next
             when "JOIN"
-                @request_result = run_join()
+                @request_result = run_join() || []
             when "ORDER" then next
             when "INSERT"
                 if @request_queue.include?("VALUE")
@@ -606,8 +552,6 @@ class MySqliteRequest
                 add_error("Unknown operation: #{operation}")
             end
         end
-        # # print out 
-        # puts "q result\n[#{@queue_result}]\n"
 
         # Return results or errors
         check_for_error ? get_request_result : get_request_errors
@@ -685,7 +629,7 @@ class MySqliteRequest
 
         if save_table()
             puts "DELETE successful - removed #{deleted_count} rows"
-            deleted_count
+            return deleted_count
         else
             add_error("DELETE failed - could not save table")
             return -1
@@ -711,19 +655,6 @@ class MySqliteRequest
             add_error("missing FROM or table data not loaded")
             return nil
         end
-        # if @table_data && @table_data[:data]
-        #     # Convert to array of hashes for consistency
-        #     headers = @table_data[:headers]
-        #     @table_data[:data].map do |row|
-        #         headers.each_with_index.each_with_object({}) do |(header, index), hash|
-        #             hash[header] = row[index]
-        #         end
-        #     end
-        # else
-        #     add_error("missing FROM or table data not loaded")
-        #     nil
-        # end
-        # puts "Table data in run_from: #{@table_data.inspect}"
     end
 
     def run_select()
@@ -731,6 +662,16 @@ class MySqliteRequest
     
         headers = get_table_headers
         data = @table_data[:data]
+
+        # Apply filtering for WHERE if present
+        if @where_result
+            column_index = headers.index(@where_result[:column])
+            if column_index
+                data = data.select do |row|
+                    row[column_index].to_s == @where_result[:value].to_s
+                end
+            end
+        end
         
         # Convert data rows to hashes with header keys
         data.map do |row|
@@ -811,63 +752,4 @@ class MySqliteRequest
         # Return formatted results for display
         return joined_data
     end
-
-    # def run_join()
-    #     return -1 unless @table_data && @join_data
-
-    #     # Check if tables exist
-    #     unless File.exist?(@table_data[:name]) && File.exist?(@join_data[:table_b])
-    #         add_error("One or both tables not found")
-    #         return -1
-    #     end
-
-    #     # # Read tables
-    #     # table_a = CSV.read(@table_data[:name], headers: true)
-    #     # table_b = CSV.read(@join_data[:table_b], headers: true)
-
-    #     # # Get column indices
-    #     # col_a_index = table_a.headers.index(@join_data[:column_a])
-    #     # col_b_index = table_b.headers.index(@join_data[:column_b])
-
-    #     # unless col_a_index && col_b_index
-    #     #     add_error("Columns not found in tables")
-    #     #     return -1
-    #     # end
-
-    #     # joined_data = []
-    #     # table_a.each do |row_a|
-    #     #     table_b.each do |row_b|
-    #     #         if row_a[col_a_index] == row_b[col_b_index]
-    #     #             joined_data << row_a.to_h.merge(row_b.to_h)
-    #     #         end
-    #     #     end
-    #     # end
-
-    #     # # Update table
-    #     # @table_data[:headers] = (table_a.headers + table_b.headers).uniq
-    #     # @table_data[:data] = joined_data
-
-    #     table_a = @table_data
-    #     table_b = get_table_data(@join_data[:table_b])
-
-    #     # Get column indices
-    #     col_a = table_a[:headers].index(@join_data[:column_a])
-    #     col_b = table_b[:headers].index(@join_data[:column_b])
-
-    #     # Perform the join
-    #     joined_data = []
-    #     table_a[:data].each do |row_a|
-    #         table_b[:data].each do |row_b|
-    #             if row_a[col_a] == row_b[col_b]
-    #                 joined_data << row_a + row_b
-    #             end
-    #         end
-    #     end
-
-    #     # Update table data
-    #     @table_data[:headers] = table_a[:headers] + table_b[:headers]
-    #     @table_data[:data] = joined_data
-
-    #     return 0
-    # end
 end
